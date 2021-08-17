@@ -1,0 +1,7 @@
+*.wasm
+
+# General stuff
+.DS_Store
+.idea
+*.log
+tmp/
