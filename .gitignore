@@ -1,4 +1,5 @@
-*.wasm
+# Added by cargo
+/target
 
 # General stuff
 .DS_Store

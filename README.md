@@ -12,4 +12,3 @@
  - [Emscripten > Optimizing WebGL #Which GL Mode To Target](https://emscripten.org/docs/optimizing/Optimizing-WebGL.html#which-gl-mode-to-target)
  - [Emscripten + SDL2 + OpenGL ES 2](https://erik-larsen.github.io/emscripten-sdl2-ogles2/) a tutorial for getting things on screen
 
-
