@@ -4,7 +4,13 @@ version = "0.1.0"
 edition = "2018"
 authors = ["Håvard Krogstie"]
 
+[profile.release]
+lto = "thin"
+
 [dependencies]
+gl33 = "0.2.1"
+beryllium = "0.2.0"
 
 [dependencies.macro-dsl]
 path = "../macro-dsl"
+beryllium = "0.2.0-alpha.2"
