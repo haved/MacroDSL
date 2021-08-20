@@ -1,0 +1,11 @@
+[package]
+name = "macro-dsl-wasm"
+version = "0.1.0"
+edition = "2018"
+authors = ["Håvard Krogstie"]
+
+[lib]
+src = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]

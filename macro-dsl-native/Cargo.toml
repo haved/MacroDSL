@@ -1,0 +1,10 @@
+[package]
+name = "macro-dsl-native"
+version = "0.1.0"
+edition = "2018"
+authors = ["Håvard Krogstie"]
+
+[dependencies]
+
+[dependencies.macro-dsl]
+path = "../macro-dsl"

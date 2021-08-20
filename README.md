@@ -1,6 +1,14 @@
 
 # MacroDSL
 
+A tool for quickly editing text by interactivly defining macros and running them fast. Written in rust.
+Can be built both for native and web. The interactive environment is rendered using OpenGL / WebGL.
+
+## Structure
+ - `macro-dsl`: The main library, including editor, language and editor rendering
+ - `macro-dsl-native`: A native binary for opening the editor in a window
+ - `macro-dsl-wasm`: A wasm target for opening the editor in a web page
+
 ## Resources used
 
  - [Rustwasm WebGL example](https://rustwasm.github.io/wasm-bindgen/examples/webgl.html)
