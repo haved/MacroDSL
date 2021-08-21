@@ -1,4 +1,5 @@
-target/
+zig-cache/
+zig-out/
 
 # General stuff
 .DS_Store
