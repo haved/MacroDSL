@@ -1,24 +1,20 @@
 const std = @import("std");
-const ray = @cImport({
-    @cInclude("raylib.h");
-});
+const Frame = @import("frame.zig").Frame;
 
 pub fn main() !void {
-    const screenWidth = 800;
-    const screenHeight = 450;
+    var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(!gpalloc.deinit());
 
-    ray.InitWindow(screenWidth, screenHeight, "raylib [core] example - basic window");
-    defer ray.CloseWindow();
+    const alloc = &gpalloc.allocator;
 
-    ray.SetTargetFPS(60);
+    var frame = try Frame.init(1600, 900, alloc);
+    defer frame.deinit();
 
-    while (!ray.WindowShouldClose()) {
-        ray.BeginDrawing();
-        defer ray.EndDrawing();
+    const buffer = try frame.createBuffer("Main Buffer");
+    //frame.createWindow(buffer);
 
-        ray.ClearBackground(ray.RAYWHITE);
-        ray.DrawText("Hello, World!", 190, 200, 20, ray.LIGHTGRAY);
+    const macro_buffer = try frame.createBuffer("Macro buffer");
+    //frame.createWindow(macro_buffer);
 
-        ray.DrawFPS(10, 10);
-    }
+    frame.loop();
 }
