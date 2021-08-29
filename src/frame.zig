@@ -6,6 +6,7 @@ const ArrayList = std.ArrayList;
 const ray = @import("raylib.zig");
 const Buffer = @import("buffer.zig").Buffer;
 const Window = @import("window.zig").Window;
+const Layout = @import("layout.zig").Layout;
 
 /// We use emacs terminology, so a frame is what the operating system would call a window
 pub const Frame = struct {
@@ -17,6 +18,7 @@ pub const Frame = struct {
 
     pub fn init(width: c_int, height: c_int, alloc: *Allocator) !This {
         ray.InitWindow(width, height, "MacroDSL");
+        ray.SetWindowState(ray.FLAG_WINDOW_RESIZABLE);
         ray.SetTargetFPS(60);
         errdefer ray.CloseWindow();
 
@@ -28,8 +30,8 @@ pub const Frame = struct {
             .buffers = buffers,
             .layout = .{
                 .content = .empty,
-                .width = @intCast(u32, ray.GetScreenWidth()),
-                .height = @intCast(u32, ray.GetScreenHeight())
+                .width = ray.GetScreenWidth(),
+                .height = ray.GetScreenHeight()
             }
         };
     }
@@ -53,19 +55,31 @@ pub const Frame = struct {
         return mem.indexOfScalar(this.buffers.items) != null;
     }
 
+    /// Assigns new layout and deinits the old one
+    /// Will resize the new layout to fit the frame
+    /// The Frame will own the layout
+    /// All allocated sub-layouts must come from the frame's allocator
+    pub fn setLayout(this: *This, layout: Layout) void {
+        const width = this.layout.width;
+        const height = this.layout.height;
+        this.layout.deinit();
+        this.layout = layout;
+        this.layout.resize(width, height);
+    }
+
     /// Loop until the users asks to close the frame
     pub fn loop(this: *This) void {
         while (!ray.WindowShouldClose()) {
             if (ray.IsWindowResized()) {
-                this.layout.width = @intCast(u32, ray.GetScreenWidth());
-                this.layout.heigth = @intCast(u32, ray.GetScreenHeight());
-                this.layout.dirtySize = true;
+                const width = ray.GetScreenWidth();
+                const height = ray.GetScreenHeight();
+                this.layout.resize(width, height);
             }
 
             ray.BeginDrawing();
 
             ray.ClearBackground(ray.RAYWHITE);
-            layout.render(0, 0);
+            this.layout.render(0, 0);
             ray.DrawFPS(10, 10);
 
             ray.EndDrawing();
@@ -74,8 +88,8 @@ pub const Frame = struct {
 
     /// Clean up the frame and all it owns
     pub fn deinit(this: *This) void {
-        this.layout.deinit(this.alloc);
-        for(this.buffers.items) |buffer| {
+        this.layout.deinit();
+        for (this.buffers.items) |buffer| {
             buffer.deinit();
             this.alloc.destroy(buffer);
         }
@@ -84,67 +98,3 @@ pub const Frame = struct {
     }
 };
 
-pub const SplitDirection = enum {
-    horizontal,
-    vertical
-};
-
-/// The layout to be used for an area of a frame
-pub const Layout = struct {
-    const This = @This();
-    pub const ContentType = union(enum) {
-        window: Window,
-        split: struct {
-            layout1: *Layout,
-            layout2: *Layout,
-            splitPos: u32,
-            splitDirection: SplitDirection
-        },
-        empty
-    };
-
-    content: ContentType,
-    width: u32,
-    height: u32,
-    dirtySize: bool = true,
-
-    pub fn render(this: *This, x: u32, y: u32) void {
-        if (this.dirtySize) {
-            switch(this.content) {
-                .empty => {},
-                .window => |window| window.setSize(this.width, this.height),
-                .split => |split| {
-
-                }
-            }
-            this.dirtySize = false;
-        }
-
-        switch(this.content) {
-            .empty => {},
-            .window => |window| {
-                window.render(x, y, this.width, this.height);
-            },
-            .split => |split| {
-
-            }
-        }
-    }
-
-    /// Deinit the layout, and every sub-layout and window it owns
-    /// alloc: The allocator used to destory the owned allocations
-    pub fn deinit(this: *This, alloc: *Allocator) void {
-        switch(this.content) {
-            .window => |window| {
-                window.deinit();
-            },
-            .split => |split| {
-                split.layout1.deinit(alloc);
-                split.layout2.deinit(alloc);
-                alloc.destroy(split.layout1);
-                alloc.destroy(split.layout2);
-            },
-            .empty => {}
-        }
-    }
-};

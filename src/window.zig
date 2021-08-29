@@ -11,6 +11,8 @@ pub const Window = struct {
     alloc: *Allocator,
     buffer: *Buffer,
 
+    /// Creates a Window containing the given buffer
+    /// The buffer is not owned by the window
     pub fn init(alloc: *Allocator, buffer: *Buffer) !Window {
         return This{
             .alloc = alloc,
@@ -18,12 +20,12 @@ pub const Window = struct {
         };
     }
 
-    pub fn setSize(this: *This, width: u32, height: u32) void {
+    pub fn setSize(this: *This, width: i32, height: i32) void {
 
     }
 
-    pub fn render(this: *This, x:u32, y:u32, width: u32, height: u32) void {
-
+    pub fn render(this: *This, x:i32, y:i32, width: i32, height: i32) void {
+        ray.DrawRectangle(x, y, width, height, ray.RAYWHITE);
     }
     
     pub fn deinit(this: *This) void {
