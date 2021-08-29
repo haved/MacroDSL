@@ -11,10 +11,10 @@ pub fn main() !void {
     defer frame.deinit();
 
     const buffer = try frame.createBuffer("Main Buffer");
-    //frame.createWindow(buffer);
+    const window = try frame.createWindow(buffer);
 
     const macro_buffer = try frame.createBuffer("Macro buffer");
-    //frame.createWindow(macro_buffer);
+    const macro_window = try frame.createWindow(macro_buffer);
 
     frame.loop();
 }

@@ -13,7 +13,7 @@ On Arch Linux, run
 sudo pacman -S zig raylib
 ```
 
-## Building for native
+## Building native binaries
 
 ``` sh
 zig build
@@ -24,4 +24,6 @@ zig build run
 
 ## References
 
-[Tetris in Zig and WebGL](https://github.com/raulgrell/tetris)
+ - [learnzig.org](https://ziglearn.org/)
+ - [Raylib](https://www.raylib.com/index.html)
+ - [Tetris in Zig and WebGL](https://github.com/raulgrell/tetris)
