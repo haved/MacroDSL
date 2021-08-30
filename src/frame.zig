@@ -5,8 +5,8 @@ const ArrayList = std.ArrayList;
 
 const ray = @import("raylib.zig");
 const Buffer = @import("buffer.zig").Buffer;
-const Window = @import("window.zig").Window;
 const Layout = @import("layout.zig").Layout;
+const colors = &@import("colors.zig").current;
 
 /// We use emacs terminology, so a frame is what the operating system would call a window
 pub const Frame = struct {
@@ -76,7 +76,7 @@ pub const Frame = struct {
 
             ray.BeginDrawing();
 
-            ray.ClearBackground(ray.RAYWHITE);
+            ray.ClearBackground(colors.background);
             this.layout.render();
             ray.DrawFPS(10, 10);
 

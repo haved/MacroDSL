@@ -46,7 +46,8 @@ pub fn main() !void {
         Layout.SplitDirection.horizontal,
         1, 0, alloc
     );
+    const layout3 = try Layout.initBorderLayout(layout2, 8, alloc);
 
-    frame.setLayout(layout2);
+    frame.setLayout(layout3);
     frame.loop();
 }

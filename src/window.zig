@@ -4,6 +4,7 @@ const Allocator = mem.Allocator;
 
 const ray = @import("raylib.zig");
 const Buffer = @import("buffer.zig").Buffer;
+const colors = &@import("colors.zig").current;
 
 pub const Window = struct {
     const This = @This();
@@ -25,7 +26,7 @@ pub const Window = struct {
     }
 
     pub fn render(this: *This, x:i32, y:i32, width: i32, height: i32) void {
-        ray.DrawRectangle(x, y, width, height, ray.RAYWHITE);
+        ray.DrawRectangle(x, y, width, height, colors.window_background);
     }
     
     pub fn deinit(this: *This) void {
