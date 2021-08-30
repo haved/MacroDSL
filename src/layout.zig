@@ -12,11 +12,8 @@ pub const Layout = struct {
     const This = @This();
 
     /// Pixels used for the split bar
-    const split_bar_width = 16;
+    const split_bar_width = 8;
     const split_bar_color = ray.MAROON;
-
-    /// Minimum pixels per side of the split
-    const split_min_size = 16;
 
     pub const SplitDirection = enum { horizontal, vertical };
 
@@ -64,11 +61,9 @@ pub const Layout = struct {
 
     pub fn resize(this: *This, width: i32, height: i32) void {
         assert(width >= 0 and height >= 0);
-        if (this.width != width or this.height != height) {
-            this.width = width;
-            this.height = height;
-            this.propagateSize();
-        }
+        this.width = width;
+        this.height = height;
+        this.propagateSize();
     }
 
     /// Make sure the content fits snuggly inside the layout
@@ -84,30 +79,27 @@ pub const Layout = struct {
                 var current_size = @intCast(u32, layout1_size + split_bar_width + layout2_size);
                 const wanted_size = if(horz) this.height else this.width;
 
-                // There is a difference between current and wanted size
-                // We increase or decrease to make it right
-                // We sometimes also increase layout1's size
-                // Otherwise layout2's size is implicitly increased
                 const total_weight = split.layout1_weight + split.layout2_weight;
                 while (current_size < wanted_size) {
                     current_size += 1;
                     if (current_size % total_weight < split.layout1_weight)
-                        layout1_size += 1;
+                        layout1_size += 1
+                    else
+                        layout2_size += 1;
                 }
 
                 while (current_size > wanted_size) {
                     if (current_size % total_weight < split.layout1_weight)
-                        layout1_size -= 1;
+                        layout1_size -= 1
+                    else
+                        layout2_size -= 1;
                     current_size -= 1;
                 }
 
-                // Make sure the layout1 size places the bar not too close to the edge
-                layout1_size = std.math.min(layout1_size, wanted_size - split_min_size - split_bar_width);
-                layout1_size = std.math.max(layout1_size, split_min_size);
+                // Make sure each side has a non-negative size, even if the split bar can't fit
+                layout1_size = std.math.max(layout1_size, 0);
+                layout2_size = std.math.max(layout2_size, 0);
 
-                layout2_size = wanted_size - split_bar_width - layout1_size;
-                // If the layout is extremely small, it is possible for this to become negative. Avoid!
-                layout2_size = std.math.max(layout2_size, split_min_size);
                 if (horz) {
                     split.layout1.resize(this.width, layout1_size);
                     split.layout2.resize(this.width, layout2_size);

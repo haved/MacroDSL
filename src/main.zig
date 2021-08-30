@@ -40,7 +40,8 @@ pub fn main() !void {
     const layout2 = try Layout.initSplitLayout(
         layout,
         Layout{
-            .content = .empty
+            .content = .empty,
+            .height = 32
         },
         Layout.SplitDirection.horizontal,
         1, 0, alloc
