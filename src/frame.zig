@@ -19,6 +19,7 @@ pub const Frame = struct {
     pub fn init(width: c_int, height: c_int, alloc: *Allocator) !This {
         ray.InitWindow(width, height, "MacroDSL");
         ray.SetWindowState(ray.FLAG_WINDOW_RESIZABLE);
+        ray.SetWindowMinSize(300, 200);
         ray.SetTargetFPS(60);
         errdefer ray.CloseWindow();
 
@@ -55,16 +56,13 @@ pub const Frame = struct {
         return mem.indexOfScalar(this.buffers.items) != null;
     }
 
-    /// Assigns new layout and deinits the old one
-    /// Will resize the new layout to fit the frame
-    /// The Frame will own the layout
-    /// All allocated sub-layouts must come from the frame's allocator
+    /// Replace the current layout with a new one
+    /// Will set the bounds to fill the frame
     pub fn setLayout(this: *This, layout: Layout) void {
-        const width = this.layout.width;
-        const height = this.layout.height;
+        var new_layout = layout;
+        new_layout.setBounds(0, 0, this.layout.width, this.layout.height);
         this.layout.deinit();
-        this.layout = layout;
-        this.layout.resize(width, height);
+        this.layout = new_layout;
     }
 
     /// Loop until the users asks to close the frame
@@ -73,13 +71,13 @@ pub const Frame = struct {
             if (ray.IsWindowResized()) {
                 const width = ray.GetScreenWidth();
                 const height = ray.GetScreenHeight();
-                this.layout.resize(width, height);
+                this.layout.setBounds(0, 0, width, height);
             }
 
             ray.BeginDrawing();
 
             ray.ClearBackground(ray.RAYWHITE);
-            this.layout.render(0, 0);
+            this.layout.render();
             ray.DrawFPS(10, 10);
 
             ray.EndDrawing();

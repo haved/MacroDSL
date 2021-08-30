@@ -14,7 +14,6 @@ pub const Layout = struct {
     /// Pixels used for the split bar
     const split_bar_width = 8;
     const split_bar_color = ray.MAROON;
-
     pub const SplitDirection = enum { horizontal, vertical };
 
     pub const Content = union(enum) {
@@ -32,9 +31,13 @@ pub const Layout = struct {
     };
 
     content: Content,
+    x: i32 = 0,
+    y: i32 = 0,
     width: i32 = 0,
     height: i32 = 0,
 
+    /// Creates a split layout containing the given layouts.
+    /// It will not have bounds until they are set
     pub fn initSplitLayout(layout1: Layout, layout2: Layout, split_direction: SplitDirection,
                            layout1_weight: u32, layout2_weight: u32, alloc: *Allocator) !Layout {
         const layout1_ptr = try alloc.create(Layout);
@@ -59,8 +62,10 @@ pub const Layout = struct {
         };
     }
 
-    pub fn resize(this: *This, width: i32, height: i32) void {
+    pub fn setBounds(this: *This, x:i32, y:i32, width: i32, height: i32) void {
         assert(width >= 0 and height >= 0);
+        this.x = x;
+        this.y = y;
         this.width = width;
         this.height = height;
         this.propagateSize();
@@ -101,29 +106,28 @@ pub const Layout = struct {
                 layout2_size = std.math.max(layout2_size, 0);
 
                 if (horz) {
-                    split.layout1.resize(this.width, layout1_size);
-                    split.layout2.resize(this.width, layout2_size);
+                    split.layout1.setBounds(this.x, this.y, this.width, layout1_size);
+                    split.layout2.setBounds(this.x, this.y + layout1_size + split_bar_width, this.width, layout2_size);
                 } else {
-                    split.layout1.resize(layout1_size, this.height);
-                    split.layout2.resize(layout2_size, this.height);
+                    split.layout1.setBounds(this.x, this.y, layout1_size, this.height);
+                    split.layout2.setBounds(this.x + layout1_size + split_bar_width, this.y, layout2_size, this.height);
                 }
             },
         }
     }
 
-    pub fn render(this: *This, x: i32, y: i32) void {
+    pub fn render(this: *This) void {
         switch (this.content) {
-            .empty => {},
+            .empty => {
+                ray.DrawRectangle(this.x, this.y, this.width, this.height, ray.BLACK);
+            },
             .window => |*window| {
-                window.render(x, y, this.width, this.height);
+                window.render(this.x, this.y, this.width, this.height);
             },
             .split => |split| {
-                ray.DrawRectangle(x, y, this.width, this.height, split_bar_color);
-                split.layout1.render(x, y);
-                if (split.split_direction == .horizontal)
-                    split.layout2.render(x, y + split.layout1.height + split_bar_width)
-                else
-                    split.layout2.render(x + split.layout1.width + split_bar_width, y);
+                ray.DrawRectangle(this.x, this.y, this.width, this.height, split_bar_color);
+                split.layout1.render();
+                split.layout2.render();
             },
         }
     }
