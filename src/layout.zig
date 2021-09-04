@@ -22,8 +22,12 @@ pub const Layout = struct {
             layout1: Own(Layout),
             layout2: Own(Layout),
             split_direction: SplitDirection,
-            layout1_weight: u32,
-            layout2_weight: u32,
+            // How to give / take pixels to the sub-layouts
+            layout1_weight: i32,
+            layout2_weight: i32,
+            // Minimum sizes for sublayouts when moving the bar
+            layout1_min_size: i32 = 70,
+            layout2_min_size: i32 = 70,
             /// Pixels used for the split bar
             split_bar_width: i32 = 8,
             moveable: bool = true,
@@ -47,7 +51,8 @@ pub const Layout = struct {
     /// Once bounds are set, the space is divided to the sub-layouts.
     /// If a sub-layout already has a size, that will affect the resulting split
     pub fn initSplitLayout(layout1: Layout, layout2: Layout, split_direction: SplitDirection,
-                           split_bar_width: i32, layout1_weight: u32, layout2_weight: u32, alloc: *Allocator) !Layout {
+                           split_bar_width: i32, moveable: bool,
+                           layout1_weight: i32, layout2_weight: i32, alloc: *Allocator) !Layout {
         const layout1_ptr = try alloc.create(Layout);
         errdefer alloc.destroy(layout1_ptr);
         const layout2_ptr = try alloc.create(Layout);
@@ -64,6 +69,7 @@ pub const Layout = struct {
                     .layout2 = layout2_ptr,
                     .split_direction = split_direction,
                     .split_bar_width = split_bar_width,
+                    .moveable = moveable,
                     .layout1_weight = layout1_weight,
                     .layout2_weight = layout2_weight
                 }
@@ -112,18 +118,20 @@ pub const Layout = struct {
                 const total_weight = split.layout1_weight + split.layout2_weight;
                 while (current_size < wanted_size) {
                     current_size += 1;
-                    if (current_size % total_weight < split.layout1_weight)
+                    if (layout1_size*split.layout2_weight < layout2_size*split.layout1_weight)
                         layout1_size += 1
                     else
                         layout2_size += 1;
                 }
 
                 while (current_size > wanted_size) {
-                    if (current_size % total_weight < split.layout1_weight)
+                    current_size -= 1;
+                    if(layout1_size <= split.layout1_min_size)
+                        layout2_size -= 1
+                    else if(layout1_size*split.layout2_weight > layout2_size*split.layout1_weight)
                         layout1_size -= 1
                     else
                         layout2_size -= 1;
-                    current_size -= 1;
                 }
 
                 // Make sure each side has a non-negative size, even if the split bar can't fit
@@ -161,6 +169,10 @@ pub const Layout = struct {
                 split.layout1.update();
                 split.layout2.update();
 
+                if (!split.moveable)
+                    return;
+
+                // Handle moving of the split bar
                 const mx = ray.GetMouseX();
                 const my = ray.GetMouseY();
                 if (this.isPointInLayout(mx, my)
@@ -172,7 +184,45 @@ pub const Layout = struct {
                     else if(ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
                         split.mouse_state = .hover;
                 } else {
-                    split.mouse_state = .standby;
+                    // We are not hovering the split bar
+                    if(split.mouse_state == .hover or ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
+                        split.mouse_state = .standby;
+
+                    if (split.mouse_state == .pressed) {
+                        switch(split.split_direction) {
+                            .vertical => {
+                                while (mx < split.layout1.x+split.layout1.width
+                                           and split.layout1.width > split.layout1_min_size) {
+                                    split.layout1.width -= 1;
+                                    split.layout2.x -= 1;
+                                    split.layout2.width += 1;
+                                }
+                                while (mx > split.layout2.x
+                                           and split.layout2.width > split.layout2_min_size) {
+                                    split.layout1.width += 1;
+                                    split.layout2.x += 1;
+                                    split.layout2.width -= 1;
+                                }
+
+                            },
+                            .horizontal => {
+                                while (my < split.layout1.y+split.layout1.height
+                                           and split.layout1.height > split.layout1_min_size) {
+                                    split.layout1.height -= 1;
+                                    split.layout2.y -= 1;
+                                    split.layout2.height += 1;
+                                }
+                                while (my > split.layout2.y
+                                           and split.layout2.height > split.layout2_min_size) {
+                                    split.layout1.height += 1;
+                                    split.layout2.y += 1;
+                                    split.layout2.height -= 1;
+                                }
+                            }
+                        }
+                        split.layout1.recalculateLayout();
+                        split.layout2.recalculateLayout();
+                    }
                 }
             },
             .border => |border| {
