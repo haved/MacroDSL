@@ -75,6 +75,8 @@ pub const Frame = struct {
                 this.layout.setBounds(0, 0, width, height);
             }
 
+            this.layout.update();
+
             ray.BeginDrawing();
 
             ray.ClearBackground(colors.background);

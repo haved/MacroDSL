@@ -11,6 +11,10 @@ pub const Window = struct {
 
     alloc: *Allocator,
     buffer: *Buffer,
+    x: i32 = 0,
+    y: i32 = 0,
+    width: i32 = 0,
+    height: i32 = 0,
 
     /// Creates a Window containing the given buffer
     /// The buffer is not owned by the window
@@ -21,12 +25,19 @@ pub const Window = struct {
         };
     }
 
-    pub fn setSize(this: *This, width: i32, height: i32) void {
+    pub fn setBounds(this: *This, x: i32, y: i32, width: i32, height: i32) void {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+
+    pub fn update(this: *This) void {
 
     }
 
-    pub fn render(this: *This, x:i32, y:i32, width: i32, height: i32) void {
-        ray.DrawRectangle(x, y, width, height, colors.window_background);
+    pub fn render(this: *This) void {
+        ray.DrawRectangle(this.x, this.y, this.width, this.height, colors.window_background);
     }
     
     pub fn deinit(this: *This) void {

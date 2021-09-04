@@ -6,6 +6,7 @@ const Allocator = mem.Allocator;
 const ray = @import("raylib.zig");
 
 const Window = @import("window.zig").Window;
+const Own = @import("mem.zig").Own;
 const colors = &@import("colors.zig").current;
 
 /// The layout to be used for an area of a frame
@@ -17,20 +18,20 @@ pub const Layout = struct {
     pub const Content = union(enum) {
         window: Window,
         split: struct {
-            /// The allocator owning layout1 and layout2
             alloc: *Allocator,
-            layout1: *Layout,
-            layout2: *Layout,
+            layout1: Own(Layout),
+            layout2: Own(Layout),
             split_direction: SplitDirection,
             layout1_weight: u32,
             layout2_weight: u32,
             /// Pixels used for the split bar
             split_bar_width: i32 = 8,
+            moveable: bool = true,
+            mouse_state: enum { standby, hover, pressed } = .standby
         },
         border: struct {
-            /// The allocator owning the child
             alloc: *Allocator,
-            child: *Layout,
+            child: Own(Layout),
             border_width: i32
         },
         empty
@@ -86,7 +87,7 @@ pub const Layout = struct {
         };
     }
 
-    pub fn setBounds(this: *This, x:i32, y:i32, width: i32, height: i32) void {
+    pub fn setBounds(this: *This, x: i32, y: i32, width: i32, height: i32) void {
         assert(width >= 0 and height >= 0);
         this.x = x;
         this.y = y;
@@ -100,7 +101,7 @@ pub const Layout = struct {
     pub fn recalculateLayout(this: *This) void {
         switch (this.content) {
             .empty => {},
-            .window => |*window| window.setSize(this.width, this.height),
+            .window => |*window| window.setBounds(this.x, this.y, this.width, this.height),
             .split => |split| {
                 const horz = split.split_direction == .horizontal;
                 var layout1_size = if(horz) split.layout1.height else split.layout1.width;
@@ -146,19 +147,58 @@ pub const Layout = struct {
         }
     }
 
+    fn isPointInLayout(this: *const This, x: i32, y: i32) bool {
+        return x >= this.x and y >= this.y and x < this.x+this.width and y < this.y+this.height;
+    }
+
+    pub fn update(this: *This) void {
+        switch (this.content) {
+            .empty => {},
+            .window => |*window| {
+                window.update();
+            },
+            .split => |*split| {
+                split.layout1.update();
+                split.layout2.update();
+
+                const mx = ray.GetMouseX();
+                const my = ray.GetMouseY();
+                if (this.isPointInLayout(mx, my)
+                        and !split.layout1.isPointInLayout(mx, my)
+                        and !split.layout2.isPointInLayout(mx, my)) {
+                    // Mouse cursor is on split bar
+                    if (ray.IsMouseButtonPressed(ray.MOUSE_LEFT_BUTTON))
+                        split.mouse_state = .pressed
+                    else if(ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
+                        split.mouse_state = .hover;
+                } else {
+                    split.mouse_state = .standby;
+                }
+            },
+            .border => |border| {
+                border.child.update();
+            }
+        }
+    }
+
     pub fn render(this: *This) void {
         switch (this.content) {
             .empty => {},
             .window => |*window| {
-                window.render(this.x, this.y, this.width, this.height);
+                window.render();
             },
             .split => |split| {
+                const bar_color = switch(split.mouse_state) {
+                    .standby => colors.split_bar,
+                    .hover => colors.split_bar_hover,
+                    .pressed => colors.split_bar_pressed,
+                };
                 if (split.split_direction == .horizontal) {
                     ray.DrawRectangle(this.x, split.layout2.y-split.split_bar_width,
-                                      this.width, split.split_bar_width, colors.split_bar);
+                                      this.width, split.split_bar_width, bar_color);
                 } else {
                     ray.DrawRectangle(split.layout2.x-split.split_bar_width, this.y,
-                                      split.split_bar_width, this.height, colors.split_bar);
+                                      split.split_bar_width, this.height, bar_color);
                 }
                 split.layout1.render();
                 split.layout2.render();
