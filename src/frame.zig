@@ -7,13 +7,14 @@ const ray = @import("raylib.zig");
 const Buffer = @import("buffer.zig").Buffer;
 const Layout = @import("layout.zig").Layout;
 const colors = &@import("colors.zig").current;
+const Own = @import("mem.zig").Own;
 
 /// We use emacs terminology, so a frame is what the operating system would call a window
 pub const Frame = struct {
     const This = @This();
 
     alloc: *Allocator,
-    buffers: ArrayList(*Buffer),
+    buffers: ArrayList(Own(Buffer)),
     layout: Layout,
 
     pub fn init(width: c_int, height: c_int, alloc: *Allocator) !This {

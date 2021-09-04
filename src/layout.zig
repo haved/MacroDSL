@@ -46,7 +46,7 @@ pub const Layout = struct {
     /// Once bounds are set, the space is divided to the sub-layouts.
     /// If a sub-layout already has a size, that will affect the resulting split
     pub fn initSplitLayout(layout1: Layout, layout2: Layout, split_direction: SplitDirection,
-                           layout1_weight: u32, layout2_weight: u32, alloc: *Allocator) !Layout {
+                           split_bar_width: i32, layout1_weight: u32, layout2_weight: u32, alloc: *Allocator) !Layout {
         const layout1_ptr = try alloc.create(Layout);
         errdefer alloc.destroy(layout1_ptr);
         const layout2_ptr = try alloc.create(Layout);
@@ -62,6 +62,7 @@ pub const Layout = struct {
                     .layout1 = layout1_ptr,
                     .layout2 = layout2_ptr,
                     .split_direction = split_direction,
+                    .split_bar_width = split_bar_width,
                     .layout1_weight = layout1_weight,
                     .layout2_weight = layout2_weight
                 }
