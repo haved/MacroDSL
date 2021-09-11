@@ -38,6 +38,7 @@ pub const Window = struct {
 
     pub fn render(this: *This) void {
         ray.DrawRectangle(this.x, this.y, this.width, this.height, colors.window_background);
+        ray.DrawText("This is a window!", this.x, this.y, 20, colors.text_color);
     }
     
     pub fn deinit(this: *This) void {

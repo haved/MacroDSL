@@ -40,8 +40,8 @@ fn makeDefaultLayout(frame: *Frame, alloc: *std.mem.Allocator) !Layout {
                     .window = macro_window
                 }
             },
-            Layout.SplitDirection.vertical, 8, true,
-            3, 1, alloc
+            Layout.SplitDirection.vertical, 6, true,
+            100, 100, 200, 100, alloc
         );
         errdefer main_split.deinit();
         break :modeline_split try Layout.initSplitLayout(
@@ -51,9 +51,9 @@ fn makeDefaultLayout(frame: *Frame, alloc: *std.mem.Allocator) !Layout {
                 .height = 32
             },
             Layout.SplitDirection.horizontal, 0, false,
-            1, 0, alloc
+            0, 32, 1, 0, alloc
         );
     };
     errdefer modeline_split.deinit();
-    return try Layout.initBorderLayout(modeline_split, 8, alloc);
+    return try Layout.initBorderLayout(modeline_split, 4, alloc);
 }

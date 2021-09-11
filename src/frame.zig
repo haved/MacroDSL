@@ -81,7 +81,7 @@ pub const Frame = struct {
 
             ray.ClearBackground(colors.background);
             this.layout.render();
-            ray.DrawFPS(10, 10);
+            ray.DrawFPS(this.layout.width-100, 10);
 
             ray.EndDrawing();
         }
