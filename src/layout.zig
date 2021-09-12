@@ -1,5 +1,4 @@
 const std = @import("std");
-const assert = std.debug.assert;
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
@@ -8,6 +7,7 @@ const ray = @import("raylib.zig");
 const Window = @import("window.zig").Window;
 const Own = @import("mem.zig").Own;
 const colors = &@import("colors.zig").current;
+const assert = @import("assert.zig");
 
 /// The layout to be used for an area of a frame
 pub const Layout = struct {
@@ -100,7 +100,7 @@ pub const Layout = struct {
     }
 
     pub fn setBounds(this: *This, x: i32, y: i32, width: i32, height: i32) void {
-        assert(width >= 0 and height >= 0);
+        assert.always(width >= 0 and height >= 0);
         this.x = x;
         this.y = y;
         this.width = width;
@@ -127,7 +127,7 @@ pub const Layout = struct {
     }
 
     fn recalculateSplitLayout(this: *This, split: *SplitContent) void {
-        if (&this.content.split != split) unreachable;
+        assert.debug(&this.content.split == split);
 
         const horz = split.split_direction == .horizontal;
         var layout1_size = if(horz) split.layout1.height else split.layout1.width;
@@ -204,7 +204,7 @@ pub const Layout = struct {
     }
 
     fn handleSplitBarUpdate(this: *This, split: *SplitContent) void {
-        if (&this.content.split != split) unreachable;
+        assert.debug(&this.content.split == split);
 
         if (!split.moveable)
             return;
