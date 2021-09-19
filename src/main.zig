@@ -40,7 +40,7 @@ fn makeDefaultLayout(frame: *Frame, alloc: *std.mem.Allocator) !Layout {
                     .window = macro_window
                 }
             },
-            Layout.SplitDirection.vertical, 6, true,
+            Layout.SplitDirection.vertical, 8, true,
             100, 100, 200, 100, alloc
         );
         errdefer main_split.deinit();

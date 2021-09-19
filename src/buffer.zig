@@ -25,5 +25,6 @@ pub const Buffer = struct {
 
     pub fn deinit(this: *This) void {
         this.alloc.free(this.name);
+        this.content.deinit();
     }
 };
