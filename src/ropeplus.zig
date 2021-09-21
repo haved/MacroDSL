@@ -10,7 +10,7 @@ const page_size = 4096;
 pub const DefaultRopePlus = RopePlus(256);
 
 /// A kind of mix between rope and B+ tree.
-/// All nodes are node_size, located in in arenas.
+/// All nodes are node_size, located in in arenas, and aligned to node_size
 /// Leaves contain bytes of the text buffer.
 /// Internal nodes contain only pointers to nodes on the level below,
 /// and how many text bytes are stored in that subtree.
@@ -31,11 +31,14 @@ pub fn RopePlus(comptime node_size:usize) type {
         const This = @This();
         const max_arena_count: u8 = 10;
 
-        const Node = [node_size]u8;
+        const Node = [node_size] u8;
+        /// The type used to store length of node content (including sub-nodes)
+        const NodeContentSize = u32;
 
         pub const InternalNode = struct {
             pub const DownPointer = struct {
-
+                child: ?*Node,
+                child_content_size: NodeContentSize
             };
 
             left_node: ?*Node,
@@ -45,12 +48,24 @@ pub fn RopePlus(comptime node_size:usize) type {
         pub const LeafNode = struct {
             left_node: ?*Node,
             right_node: ?*Node,
-            parent_reverse: ?*InternalNode.DownPonter,
+            parent_reverse_edge: ?*InternalNode.DownPointer,
+            content_size: NodeContentSize,
+            content: [max_content_size]u8,
+
+            const max_content_size = node_size
+                - @sizeOf(?*Node)*2
+                - @sizeOf(?*InternalNode.DownPointer)
+                - @sizeOf(NodeContentSize);
         };
+
+        comptime {
+            if(@sizeOf(InternalNode) > @sizeOf(Node)) @panic("InternalNode is the wrong size!");
+            if(@sizeOf(LeafNode) != @sizeOf(Node)) @panic("LeafNode is the wrong size!");
+        }
 
         node_allocator: NodeAllocator(Node),
         root_node: *Node,
-        /// Level 0 is all leaf nodes
+        /// All leaf nodes are on level 0
         root_node_level: u8,
 
         pub fn init(alloc: *Allocator) !This {
@@ -73,8 +88,9 @@ pub fn RopePlus(comptime node_size:usize) type {
 }
 
 /// Allocates larger and larger arenas for nodes
+/// All nodes are aligned with their size
 /// Freed nodes are stored in a side stack
-/// All nodes need not be freed before deinit()
+/// Nodes need not be freed before deinit()
 fn NodeAllocator(comptime Node: type) type {
     const node_size = @sizeOf(Node);
 
@@ -126,19 +142,25 @@ fn NodeAllocator(comptime Node: type) type {
             if (this.free_node_stack.items.len > 0)
                 return this.free_node_stack.pop();
 
-            // If the next_in_arena would overflow the arena size, make a new arena
-            if (this.next_in_arena >= get_arena_node_count(this.current_arena)) {
-                this.current_arena += 1;
-                this.next_in_arena = 0;
-                if (this.current_arena >= max_arena_count)
-                    @panic("NodeAllocator was never designed to allocate this much");
-            }
-            if (this.arenas[this.current_arena] == null)
-                this.arenas[this.current_arena] = try this.alloc.alloc(Node, get_arena_node_count(this.current_arena));
+            while (true) {
+                if (this.arenas[this.current_arena]) |current_arena| {
+                    if (this.next_in_arena <= current_arena.len) {
+                        const result = &current_arena[this.next_in_arena];
+                        this.next_in_arena += 1;
+                        return result;
+                    }
 
-            const result = &this.arenas[this.current_arena].?[this.next_in_arena];
-            this.next_in_arena += 1;
-            return result;
+                    this.current_arena += 1;
+                    this.next_in_arena = 0;
+                    if (this.current_arena >= max_arena_count)
+                        @panic("NodeAllocator was never designed to allocate this much");
+                }
+
+                // Allocate the new arena, with correct alignment
+                this.arenas[this.current_arena] =
+                    try this.alloc.allocWithOptions(
+                        Node, get_arena_node_count(this.current_arena), node_size, null);
+            }
         }
 
         /// Frees one Node. Does not actually give up any memory
