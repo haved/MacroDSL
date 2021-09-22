@@ -157,9 +157,10 @@ fn NodeAllocator(comptime Node: type) type {
                 }
 
                 // Allocate the new arena, with correct alignment
+                // TODO: Maybe we could use .at_least, if the allocator thinks that's a good idea
                 this.arenas[this.current_arena] =
-                    try this.alloc.allocWithOptions(
-                        Node, get_arena_node_count(this.current_arena), node_size, null);
+                    try this.alloc.allocAdvanced(
+                        Node, node_size, get_arena_node_count(this.current_arena), .exact);
             }
         }
 
