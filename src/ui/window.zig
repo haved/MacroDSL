@@ -38,7 +38,12 @@ pub const Window = struct {
 
     pub fn render(this: *This) void {
         ray.DrawRectangle(this.x, this.y, this.width, this.height, colors.window_background);
-        ray.DrawText("This is a window!", this.x, this.y, 20, colors.text_color);
+
+        // Draw modeline
+        const modeline_height = 20;
+        ray.DrawRectangle(this.x, this.y+this.height-modeline_height,
+                          this.width, modeline_height, colors.modeline_background);
+        ray.DrawText("Window!", this.x+4, this.y+this.height-18, modeline_height-4, colors.text_color);
     }
     
     pub fn deinit(this: *This) void {
