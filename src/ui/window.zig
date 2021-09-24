@@ -2,8 +2,8 @@ const std = @import("std");
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
-const ray = @import("raylib.zig");
-const Buffer = @import("buffer.zig").Buffer;
+const ray = @import("../raylib.zig");
+const Buffer = @import("../text/buffer.zig").Buffer;
 const colors = &@import("colors.zig").current;
 
 pub const Window = struct {

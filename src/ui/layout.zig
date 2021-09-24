@@ -2,10 +2,10 @@ const std = @import("std");
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
-const ray = @import("raylib.zig");
+const Own = @import("../mem.zig").Own;
 
+const ray = @import("../raylib.zig");
 const Window = @import("window.zig").Window;
-const Own = @import("mem.zig").Own;
 const colors = &@import("colors.zig").current;
 
 /// The layout to be used for an area of a frame

@@ -3,11 +3,11 @@ const mem = std.mem;
 const Allocator = mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const ray = @import("raylib.zig");
-const Buffer = @import("buffer.zig").Buffer;
+const ray = @import("../raylib.zig");
+const Buffer = @import("../text/buffer.zig").Buffer;
 const Layout = @import("layout.zig").Layout;
 const colors = &@import("colors.zig").current;
-const Own = @import("mem.zig").Own;
+const Own = @import("../mem.zig").Own;
 
 /// We use emacs terminology, so a frame is what the operating system would call a window
 pub const Frame = struct {

@@ -1,7 +1,7 @@
 const std = @import("std");
-const Frame = @import("frame.zig").Frame;
-const Layout = @import("layout.zig").Layout;
-const Window = @import("window.zig").Window;
+const Frame = @import("ui/frame.zig").Frame;
+const Layout = @import("ui/layout.zig").Layout;
+const Window = @import("ui/window.zig").Window;
 
 pub fn main() !void {
     var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};

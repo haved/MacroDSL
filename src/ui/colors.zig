@@ -1,5 +1,5 @@
 
-pub const Color = @import("raylib.zig").Color;
+pub const Color = @import("../raylib.zig").Color;
 
 pub const ColorMap = struct {
     background: Color,
