@@ -4,7 +4,7 @@ const Allocator = mem.Allocator;
 
 const Own = @import("../mem.zig").Own;
 
-const ray = @import("../raylib.zig");
+const ray = @import("raylib");
 const Window = @import("window.zig").Window;
 const colors = &@import("colors.zig").current;
 

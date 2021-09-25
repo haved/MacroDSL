@@ -1,4 +1,5 @@
 const std = @import("std");
+const raylib = @import("raylib-zig/lib.zig").Pkg("raylib-zig");
 
 pub fn build(b: *std.build.Builder) void {
     // Standard target options allows the person running `zig build` to choose
@@ -14,8 +15,10 @@ pub fn build(b: *std.build.Builder) void {
     const exe = b.addExecutable("MacroDSL", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
-    exe.linkLibC();
-    exe.linkSystemLibrary("raylib");
+
+    const system_raylib = b.option(bool, "system-raylib", "link to preinstalled raylib libraries") orelse true;
+    raylib.link(exe, system_raylib);
+
     exe.install();
 
     const run_cmd = exe.run();

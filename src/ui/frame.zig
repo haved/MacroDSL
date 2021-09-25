@@ -3,7 +3,7 @@ const mem = std.mem;
 const Allocator = mem.Allocator;
 const ArrayList = std.ArrayList;
 
-const ray = @import("../raylib.zig");
+const ray = @import("raylib");
 const Buffer = @import("../text/buffer.zig").Buffer;
 const Layout = @import("layout.zig").Layout;
 const colors = &@import("colors.zig").current;

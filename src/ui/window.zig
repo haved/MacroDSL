@@ -2,7 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
-const ray = @import("../raylib.zig");
+const ray = @import("raylib");
 const Buffer = @import("../text/buffer.zig").Buffer;
 const colors = &@import("colors.zig").current;
 
