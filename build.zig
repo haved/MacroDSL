@@ -16,7 +16,7 @@ pub fn build(b: *std.build.Builder) void {
     exe.setTarget(target);
     exe.setBuildMode(mode);
 
-    const system_raylib = b.option(bool, "system-raylib", "link to preinstalled raylib libraries") orelse true;
+    const system_raylib = b.option(bool, "system-raylib", "link to preinstalled raylib libraries") orelse false;
     raylib.link(exe, system_raylib);
 
     exe.install();

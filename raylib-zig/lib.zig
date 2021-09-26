@@ -10,6 +10,26 @@ pub fn Pkg(pkgdir: []const u8) type {
                 exe.addIncludeDir(pkgdir ++ "/raylib/src");
             }
 
+            // This switch is stolen from raylib/src/build.zig
+            switch (exe.target.toTarget().os.tag) {
+                .windows => {
+                    exe.linkSystemLibrary("winmm");
+                    exe.linkSystemLibrary("gdi32");
+                    exe.linkSystemLibrary("opengl32");
+                    exe.addIncludeDir("external/glfw/deps/mingw");
+                },
+                .linux => {
+                    exe.linkSystemLibrary("GL");
+                    exe.linkSystemLibrary("rt");
+                    exe.linkSystemLibrary("dl");
+                    exe.linkSystemLibrary("m");
+                    exe.linkSystemLibrary("X11");
+                },
+                else => {
+                    @panic("Unsupported OS");
+                },
+            }
+
             exe.linkSystemLibrary("raylib");
             exe.linkLibC();
 
