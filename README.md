@@ -6,11 +6,19 @@ A text editor with interactive macro creation and execution. Made to be fast.
 ## Dependencies
 
  - Zig
- - Raylib
+ - Raylib (vendored)
  
-On Arch Linux, run
+On Arch Linux you can install zig from pacman, run
 ```sh
-sudo pacman -S zig raylib
+sudo pacman -S zig
+```
+
+To build raylib, make sure you have the submodule
+
+``` sh
+git submodule update --init
+cd raylib-zig/raylib/src
+zig build
 ```
 
 ## Building native binaries
