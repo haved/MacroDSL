@@ -5,8 +5,8 @@ pub const Buffer = struct {
     const This = @This();
 
     alloc: *Allocator,
+    /// The name of this buffer, owned
     name: []u8,
-
     content: DefaultRopePlus,
 
     pub fn init(name: []const u8, alloc: *Allocator) !This {

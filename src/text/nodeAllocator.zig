@@ -6,14 +6,16 @@ const ArrayList = std.ArrayList;
 const page_size = 4096;
 
 /// Allocates larger and larger arenas for nodes
-/// All nodes are aligned with their size
 /// Freed nodes are stored in a side stack
 /// Nodes need not be freed before deinit()
 pub fn NodeAllocator(comptime Node: type) type {
     const node_size = @sizeOf(Node);
 
-    comptime if (node_size % page_size != 0 and page_size % node_size != 0)
-        @panic("Nodes and pages don't align");
+    comptime if (node_size % page_size != 0 and page_size % node_size != 0) {
+        const msg = std.fmt.comptimePrint("not aligned! node_size: {}, page_size: {}",
+                                          .{node_size, page_size});
+        //@compileError(msg);
+    };
     const smallest_arena_node_count: usize = if (page_size > node_size) page_size / node_size else 1;
 
     return struct {
@@ -76,9 +78,7 @@ pub fn NodeAllocator(comptime Node: type) type {
 
                 // Allocate the new arena, with correct alignment
                 // TODO: Maybe we could use .at_least, if the allocator thinks that's a good idea
-                this.arenas[this.current_arena] =
-                    try this.alloc.allocAdvanced(
-                        Node, node_size, get_arena_node_count(this.current_arena), .exact);
+                this.arenas[this.current_arena] = try this.alloc.alloc(Node, node_size);
             }
         }
 
