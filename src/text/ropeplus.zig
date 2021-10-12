@@ -6,7 +6,7 @@ const NodeAllocator = @import("nodeAllocator.zig").NodeAllocator;
 pub const DefaultRopePlus = RopePlus(256);
 
 /// A kind of mix between rope and B+ tree.
-/// All nodes are node_size, located in arenas, and aligned to node_size
+/// All nodes are node_size, located in arenas, and aligned to node_size.
 /// Leaves contain bytes of the text buffer.
 /// Leaves also point into an intrusive linked list of stored markers.
 /// Internal nodes contain pointers to nodes on the level below,
@@ -45,6 +45,7 @@ pub fn RopePlus(comptime node_size: usize) type {
                 leaf: LeafNodeData
             },
 
+            // Check that all requirements for Node are met.
             comptime {
                 if (@sizeOf(@This()) != node_size) {
                     const msg = std.fmt.comptimePrint("sizeOf Node ({}) is not node_size ({})",
@@ -52,7 +53,7 @@ pub fn RopePlus(comptime node_size: usize) type {
                     @compileError(msg);
                 }
                 if (@alignOf(@This()) != node_size) {
-                    @compileError("Node is not node_size aligned!");
+                    @compileError("Node is not node_size aligned");
                 }
             }
         };
@@ -128,6 +129,7 @@ pub fn RopePlus(comptime node_size: usize) type {
             return root_node.content_length;
         }
 
+        /// Returns the leftmost leaf node
         pub fn get_first_leaf_node(this: *This) !Node {
             var node = this.root_node;
             while(true) {
@@ -141,6 +143,7 @@ pub fn RopePlus(comptime node_size: usize) type {
             }
         }
 
+        /// Returns the rightmost leaf node
         pub fn get_last_leaf_node(this: *This) !Node {
             var node = this.root_node;
             while(true) {
@@ -154,6 +157,72 @@ pub fn RopePlus(comptime node_size: usize) type {
                 }
             }
         }
+
+        /// Returns the parent node given a pointer to one of its down pointers
+        pub fn down_pointer_to_node(down_ptr: *InternalNodeData.DownPointer) *Node {
+            const down_ptr_int = @ptrToInt(down_ptr);
+            // Because all Nodes are aligned to node_size, we can find the start
+            const node_ptr_int = down_ptr_int - down_ptr_int % node_size;
+            return @intToPtr(*Node, node_ptr_int);
+        }
+
+        /// Splits the specified leaf node into two leaf nodes,
+        /// and updates the parent node, possibly splitting it too.
+        ///
+        /// Exisitng byte content is split between the two new nodes
+        /// according to the optional parameter left_content, like so:
+        /// (left_content), (total-left_content)
+        ///
+        /// if left_content == null, the content is split (total+1)/2, total/2
+        ///
+        /// If allocation fails, the rope is restored to its correct state
+        pub fn split_leaf_node(this: *This, node: *Node, left_content: ?u32) !void {
+            if (node.content != .leaf) unreachable;
+
+            const total = node.content_size;
+            var left_size = (total+1)/2;
+            if(left_content) |it| {
+                if (it > total) unreachable;
+                left_size = it;
+            }
+            const right_size = total - left_size;
+            if (left_size > LeafNodeData.max_content_length) unreachable;
+            if (right_size > LeafNodeData.max_content_length) unreachable;
+
+            // The current node becomes the left node
+            const left_node = node;
+            const right_node = try this.node_allocator.allocateNode();
+            errdefer this.node_allocator.freeNode(right_node);
+            right_node.* = create_empty_leaf_node();
+
+            // Share the content between left and right
+            left_node.content_size = left_size;
+            right_node.content_size = right_size;
+            @memcpy(right_node.content.leaf.content,
+                    left_node.content.leaf.content[left_size..], right_size);
+
+            // Update pointers on the right node
+            right_node.right_node = left_node.right_node;
+            right_node.left_node = left_node;
+
+            // Update pointers on the left node
+            left_node.right_node = right_node;
+            // left_node already has the correct left pointer
+            // A potential node to the left of the left node
+            // already correctly points to the left node
+
+            // Update pointer to the right of the right node
+            if (right_node.right_node) |rightright|
+                rightright.left_node = right_node;
+
+            // If we have a parent, inform the parent
+            if (node.parent_reverse_edge) |rev_edge| {
+                const parent = down_ptr_to_node(node.parent_reverse_edge);
+
+            } else {
+                // We dont have a parant, so create a new root node!
+                // TODO: Do this alloc first!
+            }
+        }
     };
 }
-
