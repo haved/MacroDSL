@@ -35,7 +35,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         /// Needs to have size equal to node_size, and be aligned to node_size.
         /// This allows pointers into nodes to find the start of the node.
         pub const Node = struct {
-            content_size: NodeContentSize align(node_size),
+            bytes_in_subtree: NodeContentSize align(node_size),
             left_node: ?*Node,
             right_node: ?*Node,
             /// The parent of this node needs to know how much text there is in this subtree
@@ -69,7 +69,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         pub const InternalNodeData = struct {
             pub const DownPointer = struct {
                 child: ?*Node,
-                child_content_size: NodeContentSize
+                bytes_in_child: NodeContentSize
             };
             const sizeof_down_pointer = sizeof_node_ptr + @sizeOf(NodeContentSize);
             const size_left_for_down_pointers = size_left_for_content - @sizeOf(DownPointerCount);
@@ -80,7 +80,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         };
 
         /// A leaf node only contains bytes.
-        /// The first 'content_size' bytes of the content array is used.
+        /// The first 'bytes_in_subtree' bytes of the content array is used.
         pub const LeafNodeData = struct {
             pub const max_content_length = size_left_for_content;
             content: [max_content_length]u8,
@@ -113,7 +113,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         /// Creates an empty leaf node with no parent
         pub fn create_empty_leaf_node() Node {
             return Node{
-                .content_size = 0,
+                .bytes_in_subtree = 0,
                 .left_node = null,
                 .right_node = null,
                 .parent_reverse_edge = null,
@@ -166,34 +166,53 @@ pub fn RopePlus(comptime node_size: usize) type {
             return @intToPtr(*Node, node_ptr_int);
         }
 
+        /// Replaces the root node with a new node,
+        /// which becomes the parent of the exising root node
+        fn give_root_node_parent(this: *This) !void {
+
+        }
+
         /// Splits the specified leaf node into two leaf nodes,
         /// and updates the parent node, possibly splitting it too.
+        /// If there is no parent node, it is created.
         ///
-        /// Exisitng byte content is split between the two new nodes
-        /// according to the optional parameter left_content, like so:
-        /// (left_content), (total-left_content)
+        /// Exising content is split between the two new nodes
+        /// according to the optional parameter left_split, like so:
+        /// (left_split), (total-left_split)
         ///
-        /// if left_content == null, the content is split (total+1)/2, total/2
+        /// if left_split == null, the content is split (total+1)/2, total/2
         ///
-        /// If allocation fails, the rope is restored to its correct state
-        pub fn split_leaf_node(this: *This, node: *Node, left_content: ?u32) !void {
+        /// If allocation fails, no modification is made to the data structure
+        pub fn split_leaf_node(this: *This, node: *Node, left_size: ?u32) !void {
             if (node.content != .leaf) unreachable;
 
-            const total = node.content_size;
+            const total = node.bytes_in_subtree;
             var left_size = (total+1)/2;
             if(left_content) |it| {
                 if (it > total) unreachable;
                 left_size = it;
             }
             const right_size = total - left_size;
-            if (left_size > LeafNodeData.max_content_length) unreachable;
-            if (right_size > LeafNodeData.max_content_length) unreachable;
 
             // The current node becomes the left node
             const left_node = node;
             const right_node = try this.node_allocator.allocateNode();
             errdefer this.node_allocator.freeNode(right_node);
             right_node.* = create_empty_leaf_node();
+
+            // Make sure we have a parent node with enough space for another child
+            // If any of these allocation fail, we have not yet modified the structure
+            if (node.parent_reverse_edge) |parent_reverse_edge| {
+                const parent = down_pointer_to_node(parent_reverse_edge);
+                if (parent.content.internal.down_pointer_count + 1 > InternalNodeData.max_down_pointers)
+                    try this.split_internal_node(parent, null);
+            } else {
+                // We are the current root node, make a new one
+                if (node != this.root_node) unreachable;
+                try this.give_root_node_parent();
+            }
+
+            // Make our parent point to both
 
             // Share the content between left and right
             left_node.content_size = left_size;
@@ -207,22 +226,11 @@ pub fn RopePlus(comptime node_size: usize) type {
 
             // Update pointers on the left node
             left_node.right_node = right_node;
-            // left_node already has the correct left pointer
-            // A potential node to the left of the left node
-            // already correctly points to the left node
+            // left_node already has the correct two way left pointer
 
-            // Update pointer to the right of the right node
+            // Update the pointer in a potential node right of the right node
             if (right_node.right_node) |rightright|
                 rightright.left_node = right_node;
-
-            // If we have a parent, inform the parent
-            if (node.parent_reverse_edge) |rev_edge| {
-                const parent = down_ptr_to_node(node.parent_reverse_edge);
-
-            } else {
-                // We dont have a parant, so create a new root node!
-                // TODO: Do this alloc first!
-            }
         }
     };
 }
