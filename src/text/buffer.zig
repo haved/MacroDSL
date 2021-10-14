@@ -13,7 +13,7 @@ pub const Buffer = struct {
         const name_copy = try alloc.dupe(u8, name);
         errdefer alloc.free(name_copy);
 
-        const empty_content = try DefaultRopePlus.init(alloc);
+        var empty_content = try DefaultRopePlus.init(alloc);
         errdefer empty_content.deinit();
 
         return This{

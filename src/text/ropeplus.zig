@@ -96,6 +96,7 @@ pub fn RopePlus(comptime node_size: usize) type {
             errdefer node_allocator.deinit();
 
             const root_node = try node_allocator.allocateNode();
+            // We don't need to free the node, since the node_allocator "owns" it.
             root_node.* = create_empty_leaf_node();
 
             return This{
@@ -106,7 +107,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         }
 
         pub fn deinit(this: *This) void {
-            // All nodes are allocated in the arenas, so no need to free each node
+            // All nodes are "owned" by the node_allocator, so no need to free each node
             this.node_allocator.deinit();
         }
 
@@ -119,7 +120,23 @@ pub fn RopePlus(comptime node_size: usize) type {
                 .parent_reverse_edge = null,
                 .content = .{
                     .leaf = .{
-                        .content = .{0}**LeafNodeData.max_content_length,
+                        .content = undefined,
+                    }
+                }
+            };
+        }
+
+        /// Creates an empty internal node with no parent
+        pub fn create_empty_internal_node() Node {
+            return Node{
+                .bytes_in_subtree = 0,
+                .left_node = null,
+                .right_node = null,
+                .parent_reverse_edge = null,
+                .content = .{
+                    .internal = .{
+                        .down_pointer_count = 0,
+                        .down_pointers = undefined,
                     }
                 }
             };
@@ -159,17 +176,49 @@ pub fn RopePlus(comptime node_size: usize) type {
         }
 
         /// Returns the parent node given a pointer to one of its down pointers
-        pub fn down_pointer_to_node(down_ptr: *InternalNodeData.DownPointer) *Node {
+        pub fn down_pointer_to_parent_node(down_ptr: *InternalNodeData.DownPointer) *Node {
             const down_ptr_int = @ptrToInt(down_ptr);
             // Because all Nodes are aligned to node_size, we can find the start
             const node_ptr_int = down_ptr_int - down_ptr_int % node_size;
             return @intToPtr(*Node, node_ptr_int);
         }
 
+        /// Returns the index of the given down pointer in the node that owns it.
+        pub fn down_pointer_to_down_pointer_index(down_ptr: *InternalNodeData.DownPointer) DownPointerCount {
+            const node = down_pointer_to_down_pointer_index(down_ptr);
+            return down_ptr - node.content.internal.down_pointers;
+        }
+
+        /// Connect the parent and child in a two way connection.
+        /// The down pointer index must be within the down_pointer_count
+        /// Updates the parent's bytes_in_subtree.
+        /// If handle_removed is .replace, the current child's size is subtracted
+        /// if handle_removed is .ignore, the current down pointer is assumed to be garbage.
+        inline fn establish_down_pointer_relation(parent: *Node, down_ptr_index: DownPointerCount,
+                                                  handle_removed: enum {replace, ignore},
+                                                  child: *Node) void {
+            if (down_ptr_index >= parent.content.internal.down_pointer_count) unreachable;
+
+            const down_pointer = &parent.content.internal.down_pointers[down_ptr_index];
+            if (handle_removed == .replace)
+                parent.bytes_in_subtree -= down_pointer.bytes_in_child;
+
+            down_pointer.* = .{
+                .child = child,
+                .bytes_in_child = child.bytes_in_subtree
+            };
+            child.parent_reverse_edge = down_pointer;
+            parent.bytes_in_subtree += child.bytes_in_subtree;
+        }
+
         /// Replaces the root node with a new node,
         /// which becomes the parent of the exising root node
         fn give_root_node_parent(this: *This) !void {
-
+            const old_root = this.root_node;
+            this.root_node = try this.node_allocator.allocateNode();
+            this.root_node.* = create_empty_internal_node();
+            this.root_node.content.internal.down_pointer_count = 1;
+            establish_down_pointer_relation(this.root_node, 0, .ignore, old_root);
         }
 
         /// Splits the specified leaf node into two leaf nodes,
@@ -203,7 +252,7 @@ pub fn RopePlus(comptime node_size: usize) type {
             // Make sure we have a parent node with enough space for another child
             // If any of these allocation fail, we have not yet modified the structure
             if (node.parent_reverse_edge) |parent_reverse_edge| {
-                const parent = down_pointer_to_node(parent_reverse_edge);
+                const parent = down_pointer_to_parent_node(parent_reverse_edge);
                 if (parent.content.internal.down_pointer_count + 1 > InternalNodeData.max_down_pointers)
                     try this.split_internal_node(parent, null);
             } else {
@@ -212,7 +261,10 @@ pub fn RopePlus(comptime node_size: usize) type {
                 try this.give_root_node_parent();
             }
 
-            // Make our parent point to both
+            // We now know that our parent has space for both left_node and right_node
+            // Make our parent point to both. The left_node pointer is already correct.
+            const left_node_down_inx = down_pointer_to_down_pointer_index(left_node.parent_reverse_edge);
+
 
             // Share the content between left and right
             left_node.content_size = left_size;
