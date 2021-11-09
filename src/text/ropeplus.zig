@@ -199,8 +199,8 @@ pub fn RopePlus(comptime node_size: usize) type {
         /// If handle_added is .update, the added child's size is added.
         /// if handle_added is .ignore, the child is assumed to already be a non-removed child.
         inline fn establish_down_pointer_relation(parent: *Node, down_ptr_index: DownPointerCount,
-                                                  handle_removed: enum {replace, ignore},
-                                                  handle_added: enum {update, ignore},
+                                                  handle_removed: enum {subtract, ignore},
+                                                  handle_added: enum {add, ignore},
                                                   child: *Node) void {
             if (down_ptr_index >= parent.content.internal.down_pointer_count) unreachable;
 
@@ -225,10 +225,67 @@ pub fn RopePlus(comptime node_size: usize) type {
             this.root_node = try this.node_allocator.allocateNode();
             this.root_node.* = create_empty_internal_node();
             this.root_node.content.internal.down_pointer_count = 1;
-            establish_down_pointer_relation(this.root_node, 0, .ignore, .update, old_root);
+            establish_down_pointer_relation(this.root_node, 0, .ignore, .add, old_root);
         }
 
-        /// Splits the specified leaf node into two leaf nodes,
+        /// Make sure the node has a parent node with enough space for another child
+        /// Will fail if allocation fails, in which case nothing is changed
+        fn assure_has_parent_with_extra_space(this: *This, node: *Node) !void {
+            if (node.parent_reverse_edge) |parent_reverse_edge| {
+                const parent = down_pointer_to_parent_node(parent_reverse_edge);
+                // If the current parent doesn't have room for more children, split it
+                if (parent.content.internal.down_pointer_count + 1 > InternalNodeData.max_down_pointers)
+                    try this.split_internal_node(parent, null);
+            } else {
+                // We have to parent, we are the current root node, make a new one
+                if (node != this.root_node) unreachable;
+                try this.give_root_node_parent();
+            }
+        }
+
+        /// Attaches the two-way linked list between four concecutive nodes
+        /// The left_left and right_right nodes can be null
+        fn update_same_level_pointers(left_left: ?*Node, left_node: *Node, right_node: *Node, right_right: ?*Node) !void {
+            if (left_left) |it|
+                it.right_node = left_node;
+            left_node.left_node = left_left;
+            left_node.right_node = right_node;
+            right_node.left_node = left_node;
+            right_node.right_node = right_right;
+            if (right_right) |it|
+                it.left_node = right_node;
+        }
+
+        /// Adds a new child at the given position, possibly moving existing children back to make room.
+        /// Will update the bytes_in_subtree with the size of the inserted child.
+        /// The parent node must have room for the child.
+        /// The index must be within or exactly at the end of the exisiting child list.
+        fn insert_child_in_internal_node(parent: *Node, index: DownPointerCount, child: *Node) !void {
+            if (parent.content != .internal) unreachable;
+            const parent_internal = &parent.content.internal;
+            // The inserted child must be inside or next to the existing list. No holes!
+            if (index > parent_internal.down_pointer_count) unreachable;
+
+            // The last child in the current list
+            var down_ptr = parent_internal.down_pointer_count-1;
+
+            // Increase the amount of children
+            parent_internal.down_pointer_count+=1;
+            if (parent_internal.down_pointer_count >= InternalNodeData.max_down_pointers) unreachable;
+
+            // Move all children that come at or after index
+            while (down_ptr >= index) {
+                const movechild = parent_internal.down_pointers[down_ptr];
+                // We just move each child, so don't subtract or add content size
+                establish_down_pointer_relation(parent, down_ptr+1, .ignore, .ignore, movechild);
+                down_ptr-=1;
+            }
+
+            // Finally insert the new child
+            establish_down_pointer_relation(parent, index, .ignore, .add, child);
+        }
+
+        /// Splits the specified node into two nodes,
         /// and updates the parent node, possibly splitting it too.
         /// If there is no parent node, it is created.
         ///
@@ -239,12 +296,13 @@ pub fn RopePlus(comptime node_size: usize) type {
         /// if left_split == null, the content is split (total+1)/2, total/2
         ///
         /// If allocation fails, no modification is made to the data structure
-        pub fn split_leaf_node(this: *This, node: *Node, left_size: ?u32) !void {
+        pub fn split_node(this: *This, node: *Node, left_split: ?u32) !void {
             if (node.content != .leaf) unreachable;
 
+            // Calculate left_size and right_size
             const total = node.bytes_in_subtree;
             var left_size = (total+1)/2;
-            if(left_content) |it| {
+            if(left_split) |it| {
                 if (it > total) unreachable;
                 left_size = it;
             }
@@ -256,75 +314,25 @@ pub fn RopePlus(comptime node_size: usize) type {
             errdefer this.node_allocator.freeNode(right_node);
             right_node.* = create_empty_leaf_node();
 
+            // Make sure we have a parent, and that it has enough space for an additional child
+            try this.assure_has_parent_with_space(node);
 
-            // === Make sure we have a parent node with enough space for another child ===
-            // If any of these allocation fail, we have not yet modified the structure
-            if (node.parent_reverse_edge) |parent_reverse_edge| {
-                const parent = down_pointer_to_parent_node(parent_reverse_edge);
-                // If the current parent doesn't have room for more children, split it
-                if (parent.content.internal.down_pointer_count + 1 > InternalNodeData.max_down_pointers)
-                    try this.split_internal_node(parent, null);
-                // Note that splitting the node can change the current node's parent
-            } else {
-                // We are the current root node, make a new one
-                if (node != this.root_node) unreachable;
-                try this.give_root_node_parent();
-            }
-
-
-            // === Share the content between left and right nodes ===
+            // Share the content between the left and right nodes
             left_node.content_size = left_size;
             right_node.content_size = right_size;
             for (left_side.content.leaf.content[left_size..]) |b, i|
                 right_node.content.leaf.content[i] = b;
 
-
-            // === Update pointers between nodes on level 0 ===
-            // Update pointers on the right node
-            right_node.right_node = left_node.right_node;
-            right_node.left_node = left_node;
-
-            // Update pointers on the left node
-            left_node.right_node = right_node;
-            // left_node already has the correct two way left pointer
-
-            // Update the pointer in a potential node right of the right node
-            if (right_node.right_node) |rightright|
-                rightright.left_node = right_node;
-
-
-            // === Connect left_node and right_node to the parent ===
-            // We know that our parent has space for both left_node and right_node
-            // Make our parent point to both. The left_node is already connected
-            const parent = down_pointer_to_parent_node(left_node.parent_reverse_edge);
-            const parent_internal = &parent.content.internal;
-            const left_node_down_inx = down_pointer_to_down_pointer_index(left_node.parent_reverse_edge);
+            // Insert right_node as a child of our parent, right after left_node.
+            // Also update the down pointer to the left_node with its new size.
+            const parent = down_pointer_to_parent_node(node.parent_reverse_edge);
+            const left_node_down_inx = down_pointer_to_down_pointer_index(node.parent_reverse_edge);
             const right_node_down_inx = left_node_down_inx+1;
+            insert_child_in_internal_node(parent, right_node_down_inx, right_node);
+            establish_down_pointer_relation(parent, left_node_down_inx, .subtract, .add, left_node);
 
-            // Make space for the right_node DownPointer by moving all later pointers one back
-            var down_ptr = parent_internal.down_pointer_count-1;
-            parent_internal.down_pointer_count+=1;
-            while (down_ptr >= right_node_down_inx) {
-                const child = parent_internal.down_pointers[down_ptr];
-                establish_down_pointer_relation(parent, down_ptr+1, .ignore, .ignore, child);
-                down_ptr-=1;
-            }
-            // Connect left_node and right_node to the parent in the correct slots with the correct sizes
-            // We don't update the parents total size, since we never subtracted what we took from left_node
-            establish_down_pointer_relation(parent, left_node_down_inx, .ignore, .ignore, left_node);
-            establish_down_pointer_relation(parent, right_node_down_inx, .ignore, .ignore, right_node);
-        }
-
-        /// Turns one internal node into two siblings
-        /// Keeps the parent updated
-        /// The down pointers are split between them.
-        ///
-        /// If left_split is defined, the split is (left_split), (total-left_split)
-        /// If left_split is null, they are divided (total+1)/2, (total/2).
-        ///
-        /// The bytes_in_subtree is correctly calculated for both siblings
-        pub fn split_internal_node(this: *This, node: *Node, left_split: ?DownPointerCount) !void {
-
+            // Update pointers between nodes on level 0
+            update_same_level_pointers(node.left_node, left_node, right_node, node.right_node);
         }
     };
 }

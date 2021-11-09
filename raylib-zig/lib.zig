@@ -16,7 +16,6 @@ pub fn Pkg(pkgdir: []const u8) type {
                     exe.linkSystemLibrary("winmm");
                     exe.linkSystemLibrary("gdi32");
                     exe.linkSystemLibrary("opengl32");
-                    exe.addIncludeDir("external/glfw/deps/mingw");
                 },
                 .linux => {
                     exe.linkSystemLibrary("GL");
