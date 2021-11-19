@@ -13,9 +13,9 @@ pub const DefaultRopePlus = RopePlus(256);
 /// and how many text bytes are stored in that subtree.
 /// All nodes also have pointers to their parent and neighbours on their level.
 ///
-///                  +-----+-------+----+-------+-------+
-///                  | 104 | 0x000 | 77 | 0x200 |(empty)
-///                  +-----+-------+----+-------+-------+
+///            +-----+-----+-------+----+-------+-------+
+///            | 181 | 104 | 0x000 | 77 | 0x200 |(empty)
+///            +-----+-----+-------+----+-------+-------+
 ///                            ^               ^
 ///                           /                 \
 ///                          V                   V
@@ -193,10 +193,10 @@ pub fn RopePlus(comptime node_size: usize) type {
         /// The down pointer index must be within the down_pointer_count.
         /// Updates the parent's bytes_in_subtree.
         ///
-        /// If handle_removed is .replace, the current child's size is subtracted.
+        /// If handle_removed is .subtract, the current child's size is subtracted.
         /// if handle_removed is .ignore, the current down pointer is assumed to be garbage.
         ///
-        /// If handle_added is .update, the added child's size is added.
+        /// If handle_added is .add, the added child's size is added.
         /// if handle_added is .ignore, the child is assumed to already be a non-removed child.
         inline fn establish_down_pointer_relation(parent: *Node, down_ptr_index: DownPointerCount,
                                                   handle_removed: enum {subtract, ignore},
@@ -289,18 +289,26 @@ pub fn RopePlus(comptime node_size: usize) type {
         /// and updates the parent node, possibly splitting it too.
         /// If there is no parent node, it is created.
         ///
+        /// This function works for both internal and leaf nodes,
+        /// but which kind must be specified at compile time.
+        ///
         /// Exising content is split between the two new nodes
         /// according to the optional parameter left_split, like so:
         /// (left_split), (total-left_split)
         ///
+        /// Note that existing content, in the case of internal nodes, is the set of child nodes.
+        ///
         /// if left_split == null, the content is split (total+1)/2, total/2
         ///
         /// If allocation fails, no modification is made to the data structure
-        pub fn split_node(this: *This, node: *Node, left_split: ?u32) !void {
-            if (node.content != .leaf) unreachable;
+        pub fn split_node(this: *This, node: *Node, left_split: ?u32,
+                          comptime leaf_node: boolean) !void {
+            // Make sure we are compiled for the kind of node given
+            if (leaf_node != (node.content==.leaf)) unreachable;
 
             // Calculate left_size and right_size
-            const total = node.bytes_in_subtree;
+            const total = if(leaf_node) node.bytes_in_subtree
+                          else node.content.internal.down_pointer_count;
             var left_size = (total+1)/2;
             if(left_split) |it| {
                 if (it > total) unreachable;
@@ -312,16 +320,33 @@ pub fn RopePlus(comptime node_size: usize) type {
             const left_node = node;
             const right_node = try this.node_allocator.allocateNode();
             errdefer this.node_allocator.freeNode(right_node);
-            right_node.* = create_empty_leaf_node();
+
+            if (leaf_node)
+                right_node.* = create_empty_leaf_node()
+            else
+                right_node.* = create_empty_internal_node();
 
             // Make sure we have a parent, and that it has enough space for an additional child
             try this.assure_has_parent_with_space(node);
 
             // Share the content between the left and right nodes
-            left_node.content_size = left_size;
-            right_node.content_size = right_size;
-            for (left_side.content.leaf.content[left_size..]) |b, i|
-                right_node.content.leaf.content[i] = b;
+            if (leaf_node) {
+                // Move text bytes from the left leaf node to the right leaf node
+                left_node.bytes_in_subtree = left_size;
+                right_node.bytes_in_subtree = right_size;
+                for (left_node.content.leaf.content[left_size..]) |b, i|
+                    right_node.content.leaf.content[i] = b;
+            } else {
+                // Move child nodes from left internal node to right internal node
+                left_node.content.internal.down_pointer_count = left_size;
+                right_node.content.internal.down_pointer_count = right_size;
+                for (left_node.content.internal.down_pointers[left_size..]) |down_ptr, i| {
+                    establish_down_pointer_relation(right_node, i, .ignore, .add, down_ptr.child);
+                }
+                // The moved children have had their size added to right_node's bytes_in_subtree
+                // Remove this byte count from left_node
+                left_node.bytes_in_subtree -= right_node.bytes_in_subtree;
+            }
 
             // Insert right_node as a child of our parent, right after left_node.
             // Also update the down pointer to the left_node with its new size.
@@ -331,8 +356,10 @@ pub fn RopePlus(comptime node_size: usize) type {
             insert_child_in_internal_node(parent, right_node_down_inx, right_node);
             establish_down_pointer_relation(parent, left_node_down_inx, .subtract, .add, left_node);
 
-            // Update pointers between nodes on level 0
+            // Update pointers between nodes on this level
             update_same_level_pointers(node.left_node, left_node, right_node, node.right_node);
         }
+
+        pub fn validate_invariants(this: *This)
     };
 }
