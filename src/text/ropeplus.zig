@@ -39,7 +39,7 @@ pub fn RopePlus(comptime node_size: usize) type {
             left_node: ?*Node,
             right_node: ?*Node,
             /// The parent of this node needs to know how much text there is in this subtree
-            parent_reverse_edge: ?*Node,
+            parent_reverse_edge: ?*InternalNodeData.DownPointer,
             content: union(enum) {
                 internal: InternalNodeData,
                 leaf: LeafNodeData
@@ -47,14 +47,11 @@ pub fn RopePlus(comptime node_size: usize) type {
 
             // Check that all requirements for Node are met.
             comptime {
-                if (@sizeOf(@This()) != node_size) {
-                    const msg = std.fmt.comptimePrint("sizeOf Node ({}) is not node_size ({})",
-                                                      .{@sizeOf(@This()), node_size});
-                    @compileError(msg);
-                }
-                if (@alignOf(@This()) != node_size) {
+                if (@sizeOf(@This()) != node_size)
+                    @compileError(std.fmt.comptimePrint("sizeOf Node ({}) is not node_size ({})",
+                                                        .{@sizeOf(@This()), node_size}));
+                if (@alignOf(@This()) != node_size)
                     @compileError("Node is not node_size aligned");
-                }
             }
         };
         const sizeof_node_ptr = @sizeOf(usize);
@@ -88,8 +85,6 @@ pub fn RopePlus(comptime node_size: usize) type {
 
         node_allocator: NodeAllocator(Node),
         root_node: *Node,
-        /// All leaf nodes are on level 0
-        root_node_level: u8,
 
         pub fn init(alloc: *Allocator) !This {
             var node_allocator = try NodeAllocator(Node).init(alloc);
@@ -101,8 +96,7 @@ pub fn RopePlus(comptime node_size: usize) type {
 
             return This{
                 .node_allocator = node_allocator,
-                .root_node = root_node,
-                .root_node_level = 0
+                .root_node = root_node
             };
         }
 
@@ -143,7 +137,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         }
 
         pub fn get_length(this: *This) NodeContentSize {
-            return root_node.content_length;
+            return root_node.bytes_in_subtree;
         }
 
         /// Returns the leftmost leaf node
@@ -173,6 +167,25 @@ pub fn RopePlus(comptime node_size: usize) type {
                     .leaf => return node
                 }
             }
+        }
+
+        /// Gives the leftmost child of an internal node
+        pub fn get_leftmost_child(node: *Node) *Node {
+            if(node.content.internal) |internal| {
+                if (internal.down_pointer_count == 0)
+                    unreachable;
+                return internal.down_pointers[0].child;
+            } else unreachable;
+        }
+
+        /// Gives the rightmost child of an internal node
+        pub fn get_rightmost_child(node: *Node) *Node {
+            if(node.content.internal) |internal| {
+                const count = internal.down_pointer_count;
+                if (count == 0)
+                    unreachable;
+                return internal.down_pointers[count-1].child;
+            } else unreachable;
         }
 
         /// Returns the parent node given a pointer to one of its down pointers
@@ -205,7 +218,7 @@ pub fn RopePlus(comptime node_size: usize) type {
             if (down_ptr_index >= parent.content.internal.down_pointer_count) unreachable;
 
             const down_pointer = &parent.content.internal.down_pointers[down_ptr_index];
-            if (handle_removed == .replace)
+            if (handle_removed == .subtract)
                 parent.bytes_in_subtree -= down_pointer.bytes_in_child;
 
             down_pointer.* = .{
@@ -360,6 +373,76 @@ pub fn RopePlus(comptime node_size: usize) type {
             update_same_level_pointers(node.left_node, left_node, right_node, node.right_node);
         }
 
-        pub fn validate_invariants(this: *This)
+        /// Panics if the data structure is somehow incorrect
+        pub fn validate_invariants(this: *This) void {
+            this.validate_node(this.root_node);
+        }
+
+        /// Recursivly validates the node and the nodes bellow
+        ///
+        /// For leaf nodes:
+        ///  - Checks that the byte count is a legal number
+        ///
+        /// For internal nodes:
+        ///  - Checks that the byte count is correct
+        ///    - Our childrens byte counts sum up to our byte count
+        ///    - The down pointers agree with the children
+        ///  - Makes sure all children correctly point back up to node
+        ///  - Makes sure all children have correct horizontal pointers between them
+        ///    - Even checks the leftmost and rightmost horizontal pointers, "cross edges".
+        ///  - All subtrees are the same height
+        ///
+        /// Returns the depth to leaf nodes, if node is a leaf node, returns 0
+        fn validate_node(this: *This, node: *Node) u32 {
+            switch(node.content) {
+                .leaf => |leaf| {
+                    if(node.bytes_in_subtree > LeafNodeData.max_content_length)
+                        @panic("Leaf node is overfull!");
+                    return 0;
+                },
+                .internal => |internal| {
+                    // we create our own subtree byte count to check
+                    const byte_count_sum: NodeContentSize = 0;
+
+                    if (internal.down_pointer_count == 0)
+                        @panic("Empty internal node is not allowed");
+
+                    // Iterate over each child
+                    for (internal.down_pointers[0..internal.down_pointer_count]) |down_pointer, i| {
+                        const child = down_pointer.child;
+
+                        // Make sure child and parent agree on bytes in child subtree
+                        if (child.bytes_in_subtree != down_pointer.bytes_in_child)
+                            @panic("Down pointer has different byte count compared to the child");
+                        // Add up bytes in all child subtrees
+                        byte_count_sum += down_pointer.bytes_in_child;
+
+                        // Make sure the child points correctly back
+                        if (child.parent_reverse_edge != &down_pointer)
+                            @panic("Child isn't pointing back at down pointer");
+
+                        // check the child's left and right pointer
+                        const childs_left_neighbour = if (i > 0)
+                            internal.down_pointers[i-1].child
+                            else if(node.left_node) |left_node|
+                            get_rightmost_child(left_node)
+                            else null;
+
+                        const childs_right_neighbour = if (i+1 < internal.down_pointer_count)
+                            internal.down_pointers[i+1].child
+                            else if(node.right_node) |right_node|
+                            get_leftmost_child(right_node)
+                            else null;
+
+                        if (childs_left_neighbour != child.left_node
+                                or childs_right_neighbour != child.right_node)
+                            @panic("Child left or right pointer doesn't point to correct neighbour child");
+                    }
+
+                    if (byte_count_sum != node.bytes_in_subtree)
+                        @panic("Internal node's bytes_in_subtree not equal sum of children");
+                }
+            }
+        }
     };
 }
