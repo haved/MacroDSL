@@ -28,8 +28,8 @@ pub fn RopePlus(comptime node_size: usize) type {
         const This = @This();
 
         /// The type used to store length of node content (including sub-nodes)
-        const NodeContentSize = u64;
-        const DownPointerCount = u64;
+        pub const NodeContentSize = u64;
+        pub const DownPointerCount = u64;
 
         /// A Node, either a leaf node or an internal node.
         /// Needs to have size equal to node_size, and be aligned to node_size.
@@ -401,15 +401,27 @@ pub fn RopePlus(comptime node_size: usize) type {
                     return 0;
                 },
                 .internal => |internal| {
+                    if (internal.down_pointer_count == 0)
+                        @panic("Empty internal node is not allowed");
+
                     // we create our own subtree byte count to check
                     const byte_count_sum: NodeContentSize = 0;
 
-                    if (internal.down_pointer_count == 0)
-                        @panic("Empty internal node is not allowed");
+                    // every child should have the same height down to level 0
+                    var common_child_depth: ?u32 = null;
 
                     // Iterate over each child
                     for (internal.down_pointers[0..internal.down_pointer_count]) |down_pointer, i| {
                         const child = down_pointer.child;
+
+                        // validate the child
+                        const child_depth = validate_node(child);
+
+                        // also make sure that all children have the same depth
+                        if (common_child_depth == null)
+                            common_child_depth = child_depth;
+                        if (child_depth != common_child_depth)
+                            @panic("Child nodes have different heights");
 
                         // Make sure child and parent agree on bytes in child subtree
                         if (child.bytes_in_subtree != down_pointer.bytes_in_child)
@@ -441,6 +453,9 @@ pub fn RopePlus(comptime node_size: usize) type {
 
                     if (byte_count_sum != node.bytes_in_subtree)
                         @panic("Internal node's bytes_in_subtree not equal sum of children");
+
+                    // all our children have the same height, we have that height+1
+                    return common_child_height + 1;
                 }
             }
         }
