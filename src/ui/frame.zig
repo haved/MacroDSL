@@ -13,11 +13,11 @@ const Own = @import("../mem.zig").Own;
 pub const Frame = struct {
     const This = @This();
 
-    alloc: *Allocator,
+    alloc: Allocator,
     buffers: ArrayList(Own(Buffer)),
     layout: Layout,
 
-    pub fn init(width: c_int, height: c_int, alloc: *Allocator) !This {
+    pub fn init(width: c_int, height: c_int, alloc: Allocator) !This {
         ray.InitWindow(width, height, "MacroDSL");
         ray.SetWindowState(ray.FLAG_WINDOW_RESIZABLE);
         ray.SetWindowMinSize(300, 200);
@@ -54,7 +54,7 @@ pub const Frame = struct {
     /// Checks that a buffer exists in and is owned by this frame
     /// If a buffer gets removed from its frame, all pointers to that buffer become invalid
     pub fn hasBuffer(this: *This, buffer: *Buffer) bool {
-        return mem.indexOfScalar(this.buffers.items) != null;
+        return mem.indexOfScalar(*Buffer, this.buffers.items, buffer) != null;
     }
 
     /// Replace the current layout with a new one

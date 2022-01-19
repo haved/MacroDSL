@@ -9,8 +9,9 @@ pub const DefaultRopePlus = RopePlus(256);
 /// All nodes are node_size, located in arenas, and aligned to node_size.
 /// Leaves contain bytes of the text buffer.
 /// Leaves also point into an intrusive linked list of stored markers.
-/// Internal nodes contain pointers to nodes on the level below,
-/// and how many text bytes are stored in that subtree.
+/// Internal nodes contain pointers to nodes on the level below.
+/// These are called down pointers, and they also include how many text bytes are stored in that subtree.
+/// These must of course be updated when a child node is updated.
 /// All nodes also have pointers to their parent and neighbours on their level.
 ///
 ///            +-----+-----+-------+----+-------+-------+
@@ -29,7 +30,8 @@ pub fn RopePlus(comptime node_size: usize) type {
 
         /// The type used to store length of node content (including sub-nodes)
         pub const NodeContentSize = u64;
-        pub const DownPointerCount = u64;
+        /// The type used to store count of down pointers in an internal node.
+        pub const DownPointerCount = u8;
 
         /// A Node, either a leaf node or an internal node.
         /// Needs to have size equal to node_size, and be aligned to node_size.
@@ -86,7 +88,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         node_allocator: NodeAllocator(Node),
         root_node: *Node,
 
-        pub fn init(alloc: *Allocator) !This {
+        pub fn init(alloc: Allocator) !This {
             var node_allocator = try NodeAllocator(Node).init(alloc);
             errdefer node_allocator.deinit();
 
@@ -137,7 +139,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         }
 
         pub fn get_length(this: *This) NodeContentSize {
-            return root_node.bytes_in_subtree;
+            return this.root_node.bytes_in_subtree;
         }
 
         /// Returns the leftmost leaf node
@@ -314,8 +316,7 @@ pub fn RopePlus(comptime node_size: usize) type {
         /// if left_split == null, the content is split (total+1)/2, total/2
         ///
         /// If allocation fails, no modification is made to the data structure
-        pub fn split_node(this: *This, node: *Node, left_split: ?u32,
-                          comptime leaf_node: boolean) !void {
+        pub fn split_node(this: *This, node: *Node, left_split: ?u32, comptime leaf_node: bool) !void {
             // Make sure we are compiled for the kind of node given
             if (leaf_node != (node.content==.leaf)) unreachable;
 
@@ -393,9 +394,9 @@ pub fn RopePlus(comptime node_size: usize) type {
         ///  - All subtrees are the same height
         ///
         /// Returns the depth to leaf nodes, if node is a leaf node, returns 0
-        fn validate_node(this: *This, node: *Node) u32 {
+        fn validate_node(node: *Node) u32 {
             switch(node.content) {
-                .leaf => |leaf| {
+                .leaf => {
                     if(node.bytes_in_subtree > LeafNodeData.max_content_length)
                         @panic("Leaf node is overfull!");
                     return 0;
@@ -455,7 +456,7 @@ pub fn RopePlus(comptime node_size: usize) type {
                         @panic("Internal node's bytes_in_subtree not equal sum of children");
 
                     // all our children have the same height, we have that height+1
-                    return common_child_height + 1;
+                    return common_child_depth + 1;
                 }
             }
         }

@@ -14,7 +14,7 @@ pub fn NodeAllocator(comptime Node: type) type {
     comptime if (node_size % page_size != 0 and page_size % node_size != 0) {
         const msg = std.fmt.comptimePrint("not aligned! node_size: {}, page_size: {}",
                                           .{node_size, page_size});
-        //@compileError(msg);
+        @compileError(msg);
     };
     const smallest_arena_node_count: usize = if (page_size > node_size) page_size / node_size else 1;
 
@@ -22,14 +22,15 @@ pub fn NodeAllocator(comptime Node: type) type {
         const This = @This();
         const max_arena_count = 10;
 
-        alloc: *Allocator,
+        /// The underlying allocator providing our memory
+        alloc: Allocator,
         /// A stack of empty slots for nodes
         free_node_stack: ArrayList(*Node),
         arenas: [max_arena_count]?[]Node,
         current_arena: u8,
         next_in_arena: usize,
 
-        pub fn init(alloc: *Allocator) !This {
+        pub fn init(alloc: Allocator) !This {
             return This{
                 .alloc = alloc,
                 .free_node_stack = ArrayList(*Node).init(alloc),

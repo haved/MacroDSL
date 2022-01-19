@@ -18,7 +18,7 @@ pub const Layout = struct {
         window: Window,
         split: SplitContent,
         border: struct {
-            alloc: *Allocator,
+            alloc: Allocator,
             child: Own(Layout),
             border_width: i32
         },
@@ -26,7 +26,7 @@ pub const Layout = struct {
     };
 
     pub const SplitContent = struct {
-        alloc: *Allocator,
+        alloc: Allocator,
         layout1: Own(Layout),
         layout2: Own(Layout),
         split_direction: SplitDirection,
@@ -54,7 +54,7 @@ pub const Layout = struct {
                            split_bar_width: i32, moveable: bool,
                            layout1_min_size: i32, layout2_min_size: i32,
                            layout1_desired_size_ratio: i32, layout2_desired_size_ratio: i32,
-                           alloc: *Allocator) !Layout {
+                           alloc: Allocator) !Layout {
         const layout1_ptr = try alloc.create(Layout);
         errdefer alloc.destroy(layout1_ptr);
         const layout2_ptr = try alloc.create(Layout);
@@ -83,7 +83,7 @@ pub const Layout = struct {
     }
 
     /// Creates a border around an existing layout
-    pub fn initBorderLayout(child: Layout, border_width: i32, alloc: *Allocator) !Layout {
+    pub fn initBorderLayout(child: Layout, border_width: i32, alloc: Allocator) !Layout {
         const child_ptr = try alloc.create(Layout);
         errdefer alloc.destruy(child_ptr);
         child_ptr.* = child;

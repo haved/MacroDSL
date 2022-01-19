@@ -1,7 +1,7 @@
 # Possible optimizations that might even make the program faster
 
 I'm trying to not do most clever optimizations until after I can acutally
-profile them and meassure benefits.
+profile them and measure benefits.
 
 ## Text data structure
 Lots of things to consider here.
@@ -11,12 +11,18 @@ which should all be fast, and running a program.
 ### Ideal node size
 What is the best size?
 
+#### Letting internal and leaf nodes have different size
+Maybe e.g. internal should only be 128 bytes?
+
 ### Allocating virtual memory pages?
 Instead of making increasingly large arenas,
 what if we just set aside 16GB of virtual address space?
 
 #### Not using full 64-bit pointers to nodes
 If the nodes are all in the same area, smaller indexes could be used
+
+### Not having 64 bit byte count on leaf nodes
+A leaf couldn't possibly contain that many bytes, unless we start allowing special leaf nodes that point into files.
 
 ### Letting internal nodes have dirty child sizes
 As long as the child and parent always agree about the "dirty" state,
@@ -49,3 +55,16 @@ I don't think making the Rope+ thread-safe is
 going to give any perforance benefits.
 Keep the entire thing behind a mutex?
 
+## Cool things for the language to do
+The entire point is to have a fast language, so here are some things the compiler can do to skip as much work as possible
+
+### Enter long strands of text in bulk
+If we have several commands that all input text, then we can compile those commands together, or have a buffer.
+This buffer can't be unbounded, but we want to avoid `if buffer_full then flush_buffer() end` before every insertion,
+so the compiler can block together code that has a know maximum number of additions, and then do fewer checks of remaining space.
+
+### Delete long strands of text in bulk
+If we remove things, both from before and after the cursor, those deletions can be postponed until we actaully start moving the cursor.
+
+### Combine add-buffer and delete-buffering
+If we first delete 10 chars, then add 20 chars, they should "cancel out" into a single replace 10, and a single add 10 in the final data structure.

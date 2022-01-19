@@ -9,7 +9,7 @@ const colors = &@import("colors.zig").current;
 pub const Window = struct {
     const This = @This();
 
-    alloc: *Allocator,
+    alloc: Allocator,
     buffer: *Buffer,
     x: i32 = 0,
     y: i32 = 0,
@@ -18,7 +18,7 @@ pub const Window = struct {
 
     /// Creates a Window containing the given buffer
     /// The buffer is not owned by the window
-    pub fn init(alloc: *Allocator, buffer: *Buffer) !Window {
+    pub fn init(alloc: Allocator, buffer: *Buffer) !Window {
         return This{
             .alloc = alloc,
             .buffer = buffer
@@ -33,7 +33,7 @@ pub const Window = struct {
     }
 
     pub fn update(this: *This) void {
-
+        _ = this;
     }
 
     pub fn render(this: *This) void {
@@ -47,6 +47,7 @@ pub const Window = struct {
     }
     
     pub fn deinit(this: *This) void {
-
+        _ = this;
+        // We don't own the buffer
     }
 };

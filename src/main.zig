@@ -7,7 +7,7 @@ pub fn main() !void {
     var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(!gpalloc.deinit());
 
-    const alloc = &gpalloc.allocator;
+    const alloc = gpalloc.allocator();
 
     var frame = try Frame.init(1600, 900, alloc);
     defer frame.deinit();
@@ -16,7 +16,7 @@ pub fn main() !void {
     frame.loop();
 }
 
-fn makeDefaultLayout(frame: *Frame, alloc: *std.mem.Allocator) !Layout {
+fn makeDefaultLayout(frame: *Frame, alloc: std.mem.Allocator) !Layout {
     const buffer = try frame.createBuffer("Main Buffer");
     const macro_buffer = try frame.createBuffer("Macro buffer");
 
