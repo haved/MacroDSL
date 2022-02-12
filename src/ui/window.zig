@@ -4,7 +4,7 @@ const Allocator = mem.Allocator;
 
 const ray = @import("raylib");
 const Buffer = @import("../text/buffer.zig").Buffer;
-const colors = &@import("colors.zig").current;
+const colors = &@import("colors.zig").current_map;
 
 pub const Window = struct {
     const This = @This();

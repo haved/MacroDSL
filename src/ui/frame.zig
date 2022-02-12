@@ -6,7 +6,7 @@ const ArrayList = std.ArrayList;
 const ray = @import("raylib");
 const Buffer = @import("../text/buffer.zig").Buffer;
 const Layout = @import("layout.zig").Layout;
-const colors = &@import("colors.zig").current;
+const colors = &@import("colors.zig").current_map;
 const Own = @import("../mem.zig").Own;
 
 /// We use emacs terminology, so a frame is what the operating system would call a window

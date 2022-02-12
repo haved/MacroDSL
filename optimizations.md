@@ -29,6 +29,10 @@ As long as the child and parent always agree about the "dirty" state,
 the child can update its size without having to pay its parent a visit.
 This becomes a bit more problematic with parent's parent. Dirty all the way up.
 
+Actually this isn't all that bad. A leaf node must always know its byte size,
+but the size copy in the internal nodes can be set to sentinel values.
+If any of an internal nodes children is such a sentinel, the internal node itself gets a sentinel size.
+
 ### How should leaf nodes be split?
 Probably not in the middle
 

@@ -1,28 +1,25 @@
 
 pub const Color = @import("raylib").Color;
 
+pub fn ofa(r: u8, g: u8, b: u8, a: u8) Color {
+    return .{.r = r, .g = g, .b = b, .a = a};
+}
+
+pub fn of(r: u8, g: u8, b: u8) Color {
+    return ofa(r, g, b, 255);
+}
+
 pub const ColorMap = struct {
-    background: Color,
+    background: Color = of(33, 36, 43),
 
-    window_background: Color,
-    modeline_background: Color,
+    window_background: Color = of(40, 44, 52),
+    modeline_background: Color = of(25, 28, 34),
 
-    split_bar: Color,
-    split_bar_hover: Color,
-    split_bar_pressed: Color,
+    split_bar: Color = of(29, 32, 38),
+    split_bar_hover: Color = of(33, 36, 42),
+    split_bar_pressed: Color = of(25, 28, 34),
 
-    text_color: Color
+    text_color: Color = of(200, 200, 200),
 };
 
-pub var current = ColorMap{
-    .background = .{ .r = 33, .g = 36, .b = 43, .a = 255 },
-
-    .window_background = .{ .r = 40, .g = 44, .b = 52, .a = 255 },
-    .modeline_background = .{ .r = 25, .g = 28, .b = 34, .a = 255 },
-
-    .split_bar = .{ .r = 29, .g = 32, .b = 38, .a = 255 },
-    .split_bar_hover = .{ .r = 33, .g = 36, .b = 42, .a = 255 },
-    .split_bar_pressed = .{ .r = 25, .g = 28, .b = 34, .a = 255 },
-
-    .text_color = .{ .r = 200, .g = 200, .b = 200, .a = 255 }
-};
+pub var current_map = ColorMap{};
