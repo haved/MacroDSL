@@ -6,7 +6,7 @@ const Own = @import("../mem.zig").Own;
 
 const ray = @import("raylib");
 const Window = @import("window.zig").Window;
-const colors = &@import("colors.zig").current;
+const colors = &@import("colors.zig").current_map;
 
 /// The layout to be used for an area of a frame
 pub const Layout = struct {
@@ -33,6 +33,8 @@ pub const Layout = struct {
         split_bar_width: i32,
         moveable: bool = true,
         mouse_state: enum { standby, hover, pressed } = .standby,
+        // The position on the current split bar where the dragging started
+        drag_start: i32 = 0,
         // Minimum sizes for sublayouts when moving the bar
         layout1_min_size: i32,
         layout2_min_size: i32,
@@ -113,8 +115,8 @@ pub const Layout = struct {
         switch (this.content) {
             .empty => {},
             .window => |*window| window.setBounds(this.x, this.y, this.width, this.height),
-            .split => |*split| {
-                this.recalculateSplitLayout(split);
+            .split => {
+                this.recalculateSplitLayout();
             },
             .border => |border| {
                 var bw = border.border_width;
@@ -125,8 +127,8 @@ pub const Layout = struct {
         }
     }
 
-    fn recalculateSplitLayout(this: *This, split: *SplitContent) void {
-        if (&this.content.split != split) unreachable;
+    fn recalculateSplitLayout(this: *This) void {
+        const split = &this.content.split;
 
         const horz = split.split_direction == .horizontal;
         var layout1_size = if(horz) split.layout1.height else split.layout1.width;
@@ -169,8 +171,8 @@ pub const Layout = struct {
         }
 
         // Make sure each side has a non-negative size, even if the split bar can't fit
-        layout1_size = std.math.max(layout1_size, 0);
-        layout2_size = std.math.max(layout2_size, 0);
+        layout1_size = @maximum(layout1_size, 0);
+        layout2_size = @maximum(layout2_size, 0);
 
         if (horz) {
             split.layout1.setBounds(this.x, this.y, this.width, layout1_size);
@@ -192,7 +194,7 @@ pub const Layout = struct {
                 window.update();
             },
             .split => |*split| {
-                this.handleSplitBarUpdate(split);
+                this.handleSplitBarUpdate();
                 split.layout1.update();
                 split.layout2.update();
             },
@@ -202,8 +204,10 @@ pub const Layout = struct {
         }
     }
 
-    fn handleSplitBarUpdate(this: *This, split: *SplitContent) void {
-        if (&this.content.split != split) unreachable;
+    // The split bar can be hovered, pressed and then dragged.
+    // It must still respect minimum sizes.
+    fn handleSplitBarUpdate(this: *This) void {
+        const split = &this.content.split;
 
         if (!split.moveable)
             return;
@@ -211,59 +215,55 @@ pub const Layout = struct {
         // Handle moving of the split bar
         const mx = ray.GetMouseX();
         const my = ray.GetMouseY();
+        const split_mouse = if (split.split_direction == .horizontal) my else mx;
         if (this.isPointInLayout(mx, my)
                 and !split.layout1.isPointInLayout(mx, my)
                 and !split.layout2.isPointInLayout(mx, my)) {
             // Mouse cursor is on split bar
-            if (ray.IsMouseButtonPressed(ray.MOUSE_LEFT_BUTTON))
-                split.mouse_state = .pressed
-                else if(ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
-                split.mouse_state = .hover;
-        } else {
-            // We are not hovering the split bar
-            if(split.mouse_state == .hover or ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
-                split.mouse_state = .standby;
-
-            if (split.mouse_state == .pressed) {
-                switch(split.split_direction) {
-                    .vertical => {
-                        while (mx < split.layout1.x+split.layout1.width
-                                   and split.layout1.width > split.layout1_min_size) {
-                            split.layout1.width -= 1;
-                            split.layout2.x -= 1;
-                            split.layout2.width += 1;
-                        }
-                        while (mx > split.layout2.x
-                                   and split.layout2.width > split.layout2_min_size) {
-                            split.layout1.width += 1;
-                            split.layout2.x += 1;
-                            split.layout2.width -= 1;
-                        }
-
-                    },
-                    .horizontal => {
-                        while (my < split.layout1.y+split.layout1.height
-                                   and split.layout1.height > split.layout1_min_size) {
-                            split.layout1.height -= 1;
-                            split.layout2.y -= 1;
-                            split.layout2.height += 1;
-                        }
-                        while (my > split.layout2.y
-                                   and split.layout2.height > split.layout2_min_size) {
-                            split.layout1.height += 1;
-                            split.layout2.y += 1;
-                            split.layout2.height -= 1;
-                        }
-                    }
-                }
-
-                // Update the desired split ratio since the user moved the bar
-                split.layout1_desired_size_ratio = split.layout1.width;
-                split.layout2_desired_size_ratio = split.layout2.width;
-
-                split.layout1.recalculateLayout();
-                split.layout2.recalculateLayout();
+            if (ray.IsMouseButtonPressed(ray.MOUSE_LEFT_BUTTON)) {
+                split.mouse_state = .pressed;
+                split.drag_start = split_mouse;
             }
+            else if(ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
+                split.mouse_state = .hover;
+        }
+        else if(split.mouse_state == .hover or ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
+            split.mouse_state = .standby;
+
+        // If we are pressing, and the mouse has moved
+        if (split.mouse_state == .pressed and split_mouse != split.drag_start) {
+            const drag = split_mouse - split.drag_start;
+            switch(split.split_direction) {
+                .vertical => {
+                    const diff =
+                        if (drag < 0)
+                        @minimum(0, @maximum(drag, split.layout1_min_size-split.layout1.width))
+                        else
+                        @maximum(0, @minimum(drag, split.layout2.width-split.layout2_min_size));
+                    split.layout1.width += diff;
+                    split.layout2.x += diff;
+                    split.layout2.width -= diff;
+                    split.drag_start += diff;
+                },
+                .horizontal => {
+                    const diff =
+                        if (drag < 0)
+                        @minimum(0, @maximum(drag, split.layout1_min_size-split.layout1.height))
+                        else
+                        @maximum(0, @minimum(drag, split.layout2.height-split.layout2_min_size));
+                    split.layout1.height += diff;
+                    split.layout2.y += diff;
+                    split.layout2.height -= diff;
+                    split.drag_start += diff;
+                }
+            }
+
+            // Update the desired split ratio since the user moved the bar
+            split.layout1_desired_size_ratio = split.layout1.width;
+            split.layout2_desired_size_ratio = split.layout2.width;
+
+            split.layout1.recalculateLayout();
+            split.layout2.recalculateLayout();
         }
     }
 
