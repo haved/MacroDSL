@@ -212,17 +212,19 @@ pub const Layout = struct {
         if (!split.moveable)
             return;
 
-        // Handle moving of the split bar
+        const horiz = split.split_direction == .horizontal;
+        const layout1_size = if(horiz) &split.layout1.height else &split.layout1.width;
+        const layout2_size = if(horiz) &split.layout2.height else &split.layout2.width;
         const mx = ray.GetMouseX();
         const my = ray.GetMouseY();
-        const split_mouse = if (split.split_direction == .horizontal) my else mx;
+        const mouse_pos = if (horiz) my else mx;
         if (this.isPointInLayout(mx, my)
                 and !split.layout1.isPointInLayout(mx, my)
                 and !split.layout2.isPointInLayout(mx, my)) {
             // Mouse cursor is on split bar
             if (ray.IsMouseButtonPressed(ray.MOUSE_LEFT_BUTTON)) {
                 split.mouse_state = .pressed;
-                split.drag_start = split_mouse;
+                split.drag_start = mouse_pos;
             }
             else if(ray.IsMouseButtonUp(ray.MOUSE_LEFT_BUTTON))
                 split.mouse_state = .hover;
@@ -231,36 +233,20 @@ pub const Layout = struct {
             split.mouse_state = .standby;
 
         // If we are pressing, and the mouse has moved
-        if (split.mouse_state == .pressed and split_mouse != split.drag_start) {
-            const drag = split_mouse - split.drag_start;
-            switch(split.split_direction) {
-                .vertical => {
-                    const diff =
-                        if (drag < 0)
-                        @minimum(0, @maximum(drag, split.layout1_min_size-split.layout1.width))
-                        else
-                        @maximum(0, @minimum(drag, split.layout2.width-split.layout2_min_size));
-                    split.layout1.width += diff;
-                    split.layout2.x += diff;
-                    split.layout2.width -= diff;
-                    split.drag_start += diff;
-                },
-                .horizontal => {
-                    const diff =
-                        if (drag < 0)
-                        @minimum(0, @maximum(drag, split.layout1_min_size-split.layout1.height))
-                        else
-                        @maximum(0, @minimum(drag, split.layout2.height-split.layout2_min_size));
-                    split.layout1.height += diff;
-                    split.layout2.y += diff;
-                    split.layout2.height -= diff;
-                    split.drag_start += diff;
-                }
-            }
+        if (split.mouse_state == .pressed and mouse_pos != split.drag_start) {
+            const drag = mouse_pos - split.drag_start;
+            const diff = if (drag < 0)
+                @minimum(0, @maximum(drag, split.layout1_min_size-split.layout1.width))
+                else
+                @maximum(0, @minimum(drag, split.layout2.width-split.layout2_min_size));
+            layout1_size.* += diff;
+            if(horiz) split.layout2.y += diff else split.layout2.x += diff;
+            layout2_size.* -= diff;
+            split.drag_start += diff;
 
             // Update the desired split ratio since the user moved the bar
-            split.layout1_desired_size_ratio = split.layout1.width;
-            split.layout2_desired_size_ratio = split.layout2.width;
+            split.layout1_desired_size_ratio = layout1_size.*;
+            split.layout2_desired_size_ratio = layout2_size.*;
 
             split.layout1.recalculateLayout();
             split.layout2.recalculateLayout();
