@@ -16,14 +16,69 @@ It has a few goals:
  
 ### General idea
 
+Here is an example, which could be used to turn
+
+```html
+<div class="figure">
+<img src="example.com/uploads/images/cat.jpg" class="" style="max-width: 500px">
+Lorem ipsum
+Dolor sit amet
+</div>
+
+This text I actually care about
+
+<div class="table-holder">
+This div should be left alone
+</div>
+
+<div class="figure">
+<img src="example.com/uploads/images/dog.jpg" class="">
+Some other text
+</div>
 ```
-def buffer = Buffer(content=""input1"")
-def marker = buffer.Marker(line=1,col=0)
-use marker
+into
+```markdown 
+{{< figure src="/cat.jpg" width="500">}}
+Lorem ipsum
+Dolor sit amet
+{{< /figure >}}
 
+This text I actually care about
 
+<div class="table-holder">
+This div should be left alone
+</div>
 
-macro 
+{{< figure src="/dog.jpg">}}
+Some other text
+{{< /figure >}}
+```
+
+```
+def buffer = Buffer(content=#"input"#);
+current = buffer.Marker(line=1,col=0);
+
+macro replace_div_figure {
+    macro find_div_figure {
+        let start = search "<div" | .first;
+        first 
+            "class=" => {2x f},
+            ">" => {find_div_figure};
+        first
+            "figure" => {}
+            '"' => {find_div_figure}
+        
+        current = start;
+        search 'src=';
+        f;
+        let src_end = search '"' | .before;
+        let src_begin = rsearch "/";
+        let src = src_begin.substring(src_end);
+    }
+    
+    
+}
+20x macro1
 
 ```
 
