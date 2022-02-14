@@ -27,15 +27,11 @@ pub const Frame = struct {
         const buffers = ArrayList(*Buffer).init(alloc);
         errdefer buffers.deinit();
 
-        return This{
-            .alloc = alloc,
-            .buffers = buffers,
-            .layout = .{
-                .content = .empty,
-                .width = ray.GetScreenWidth(),
-                .height = ray.GetScreenHeight()
-            }
-        };
+        return This{ .alloc = alloc, .buffers = buffers, .layout = .{
+            .content = .empty,
+            .width = ray.GetScreenWidth(),
+            .height = ray.GetScreenHeight(),
+        } };
     }
 
     /// Creates a new buffer in the frame. The Frame owns the buffer
@@ -81,7 +77,7 @@ pub const Frame = struct {
 
             ray.ClearBackground(colors.background);
             this.layout.render();
-            ray.DrawFPS(this.layout.width-100, 10);
+            ray.DrawFPS(this.layout.width - 100, 10);
 
             ray.EndDrawing();
         }
@@ -98,4 +94,3 @@ pub const Frame = struct {
         ray.CloseWindow();
     }
 };
-

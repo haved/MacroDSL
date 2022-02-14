@@ -1,6 +1,4 @@
-
 const std = @import("std");
-const assert = std.debug.assert;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
 
@@ -48,7 +46,7 @@ pub fn NodeAllocator(T: type) type {
 
         pub fn deinit(this: *This) void {
             this.free_node_stack.deinit();
-            for(this.areas) |area| {
+            for (this.areas) |area| {
                 if (area) |it| {
                     this.alloc.free(it);
                 }
@@ -61,7 +59,7 @@ pub fn NodeAllocator(T: type) type {
             if (area_index < 0)
                 return 0;
             if (area_index > 10)
-                area_index -= (area_index-10) / 4;
+                area_index -= (area_index - 10) / 4;
             return @shlExact(minimum_node_allocation_count, area_index);
         }
 
@@ -81,8 +79,7 @@ pub fn NodeAllocator(T: type) type {
             if (this.current_area >= max_area_count)
                 return Allocator.Error.OutOfMemory;
             this.areas[this.current_area] =
-                try this.alloc.alignedAlloc(T, minimum_node_allocation_alignment,
-                                            nodesInArea(this.current_area));
+                try this.alloc.alignedAlloc(T, minimum_node_allocation_alignment, nodesInArea(this.current_area));
             return &this.areas[this.current_area][0];
         }
 

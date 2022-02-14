@@ -6,8 +6,8 @@ pub const Buffer = struct {
     alloc: Allocator,
     /// The name of this buffer, owned
     name: []u8,
-    ///content: DefaultRopePlus,
 
+    ///content: DefaultRopePlus,
     pub fn init(name: []const u8, alloc: Allocator) !This {
         const name_copy = try alloc.dupe(u8, name);
         errdefer alloc.free(name_copy);

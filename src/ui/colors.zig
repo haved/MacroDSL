@@ -1,8 +1,7 @@
-
 pub const Color = @import("raylib").Color;
 
 pub fn ofa(r: u8, g: u8, b: u8, a: u8) Color {
-    return .{.r = r, .g = g, .b = b, .a = a};
+    return .{ .r = r, .g = g, .b = b, .a = a };
 }
 
 pub fn of(r: u8, g: u8, b: u8) Color {
