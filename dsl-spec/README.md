@@ -55,7 +55,7 @@ Some other text
 ```
 
 ```
-def buffer = Buffer(content=#"input"#);
+let buffer = Buffer(content=#"input");
 current = buffer.Marker(line=1,col=0);
 
 macro replace_div_figure {
