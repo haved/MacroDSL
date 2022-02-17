@@ -67,14 +67,15 @@ extern int yydebug;
     BREAK = 268,                   /* BREAK  */
     RETURN = 269,                  /* RETURN  */
     ARROW = 270,                   /* ARROW  */
-    NUMBER = 271,                  /* NUMBER  */
-    IDENTIFIER = 272,              /* IDENTIFIER  */
-    STRING = 273,                  /* STRING  */
-    REF_STRING = 274,              /* REF_STRING  */
-    REGEX = 275,                   /* REGEX  */
-    FUNCTIONAPPLY = 276,           /* FUNCTIONAPPLY  */
-    UMINUS = 277,                  /* UMINUS  */
-    THEN = 278                     /* THEN  */
+    EQ = 271,                      /* EQ  */
+    NEQ = 272,                     /* NEQ  */
+    LE = 273,                      /* LE  */
+    GE = 274,                      /* GE  */
+    NUMBER = 275,                  /* NUMBER  */
+    IDENTIFIER = 276,              /* IDENTIFIER  */
+    STRING = 277,                  /* STRING  */
+    REF_STRING = 278,              /* REF_STRING  */
+    REGEX = 279                    /* REGEX  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif

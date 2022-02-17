@@ -6,60 +6,80 @@
 %}
 
 %token LET MUT MACRO SEARCH RSEARCH MATCH IF ELSE WHILE CONTINUE BREAK RETURN ARROW
+%token EQ NEQ LE GE
 %token NUMBER IDENTIFIER STRING REF_STRING REGEX
 
-%right '='
-
-%left '|'
-%left '^'
-%left '&'
-%left '+' '-'
-%left '*' '/'
-%right '~' UMINUS
-%left '.'
-
-%nonassoc IF THEN
+%nonassoc IF
 %nonassoc ELSE
 
 %%
-program: statement_list { finished = true; };
+program: scopebody { finished = true; };
 
-statement_list: statement {}
-              | statement ';' statement_list {};
+scopebody: expression;
+expression: expression1;
+          | expression1 ';' expression;
 
-statement: expression {}
-         | IF expression statement %prec THEN {}
-         | IF expression statement ELSE statement {}
-         | MACRO IDENTIFIER expression {}
-         | variable_declaration {};
+expression1: expression2;
+          | LET IDENTIFIER ':' type '=' letvalue;
+          | LET IDENTIFIER '=' letvalue;
+          | MUT IDENTIFIER ':' type '=' letvalue;
+          | MUT IDENTIFIER '=' letvalue;
+          | MUT IDENTIFIER ':' type;
 
-variable_declaration: LET IDENTIFIER optional_type '=' expression {}
-                    | MUT IDENTIFIER optional_type '=' expression {}
-                    | MUT IDENTIFIER ':' type {};
+ifcondition: expression2;
+ifbody: expression2;
+searchbody: expression2;
+letvalue: expression2;
+assignmentvalue: expression2;
+argument: expression2;
+expression2: expression4;
+           | IF '(' ifcondition ')' ifbody %prec IF;
+           | IF '(' ifcondition ')' ifbody ELSE ifbody %prec ELSE;
 
-optional_type: ':' type {}
-             | {};
+expression4: expression5;
+           | MACRO IDENTIFIER '{' scopebody '}';
 
-type: atomic_expression {};
+expression5: expression6;
+           | expression6 '=' assignmentvalue; //right-to-left
 
-expression: op_expression {}
-          | IDENTIFIER '=' expression {};
+expression6: expression7;
+           | expression6 EQ expression7; //left-to-right
+           | expression6 NEQ expression7; //left-to-right
 
-op_expression: atomic_expression {}
-             | statement '+' statement {}
-             | statement '-' statement {}
-             | statement '*' statement {}
-             | statement '/' statement {}
-             | statement '.' IDENTIFIER {}
-             | atomic_expression '(' argument_list ')' {};
+expression7: expression8;
+           | expression7 '<' expression8; //left-to-right
+           | expression7 LE expression8; //left-to-right
+           | expression7 '>' expression8; //left-to-right
+           | expression7 GE expression8; //left-to-right
 
-atomic_expression: '{' statement_list '}' {}
-                 | '(' statement ')' {}
-                 | IDENTIFIER {};
+expression8: expression9;
+           | expression8 '+' expression9; //left-to-right
+           | expression8 '-' expression9; //left-to-right
 
-argument_list: {}
-             | statement {}
-             | statement ',' argument_list {};
+expression9: expression10;
+           | expression9 '*' expression10; //left-to-right
+           | expression9 '/' expression10; //left-to-right
+
+expression10: expression11;
+           | '-' expression10;
+
+type: expression11;
+expression11: expression12;
+            | expression11 '.' IDENTIFIER;
+            | expression11 '(' argument_list ')';
+
+expression12: '{' scopebody '}';
+            | '(' scopebody ')';
+            | IDENTIFIER;
+            | NUMBER;
+            | STRING;
+            | REF_STRING;
+            | REGEX;
+
+argument_list: ;
+             | argument;
+             | argument ',' argument_list;
+
 %%
 
 int yyerror ( const char *error )

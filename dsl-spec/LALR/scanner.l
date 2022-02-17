@@ -23,7 +23,11 @@ while                   return WHILE;
 continue                return CONTINUE;
 break                   return BREAK;
 return                  return RETURN;
-=>                      return ARROW;
+"=>"                      return ARROW;
+"=="                      return EQ;
+"!="                      return NEQ;
+"<="                      return LE;
+">="                      return GE;
 
 [0-9]+                  return NUMBER;
 [a-zA-Z_][a-zA-Z0-9_]*  return IDENTIFIER;
