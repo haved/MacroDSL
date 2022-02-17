@@ -5,20 +5,11 @@
 %option array
 %option yylineno
 
-%x COMMENT
-%x COMMENT_ENDING
-
 WHITESPACE [\ \t\v\r\n]
+COMMENT //[^\n]*
 %%
-{WHITESPACE}+           ; // Eliminate whitespace
-
-// OCaml style comments
-\(\*                    BEGIN(COMMENT);
-<COMMENT>[^\*]*         ;
-<COMMENT>\*             BEGIN(COMMENT_ENDING);
-<COMMENT_ENDING>[^\*\)] BEGIN(COMMENT);
-<COMMENT_ENDING>\*      ;
-<COMMENT_ENDING>\)      BEGIN(INITIAL);
+{WHITESPACE}+           { /* Eliminate whitespace */ }
+COMMENT                 { }
 
 let                     return LET;
 mut                     return MUT;
@@ -32,13 +23,12 @@ while                   return WHILE;
 continue                return CONTINUE;
 break                   return BREAK;
 return                  return RETURN;
-"=>"                    return ARROW;
+=>                      return ARROW;
 
 [0-9]+                  return NUMBER;
-[0-9]+x                 return REPEATER;
 [a-zA-Z_][a-zA-Z0-9_]*  return IDENTIFIER;
 \"[^\"]*\"              return STRING;
 #\"[^\"]*\"             return REF_STRING;
-/[^\"]/                 return REGEX;
+"/[^/]/"                return REGEX;
 .                       return yytext[0];
 %%

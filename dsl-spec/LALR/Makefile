@@ -15,7 +15,7 @@ dsl-lalr: main.o parser.o scanner.o
 %.o: %.c ${Y_TAB_H}
 	${CC} ${CFLAGS} -c $< -o $@
 
-${Y_TAB_H} src/parser.c: src/parser.y
+${Y_TAB_H} parser.c: parser.y
 	${YACC} ${YFLAGS} --defines=${Y_TAB_H} -o parser.c $<
 
 scanner.c: scanner.l ${Y_TAB_H}

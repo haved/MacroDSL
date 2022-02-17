@@ -86,15 +86,15 @@ macro replace_div_figure {
         "/div>" => current = it.first;
         
     search "/div>";
-    delete start current;
+    delete(start, current);
     
-    write '{{< figure src="' src '"';
+    write('{{< figure src="$src"');
     if width != null
-        write ' width="' width '"';
-    write " >}}";
+        write(' width="$width"');
+    write(" >}}");
     
     search "</div>" => delete it;
-    write "{{< /figure >}}";
+    write("{{< /figure >}}");
 };
 20x macro1;
 
