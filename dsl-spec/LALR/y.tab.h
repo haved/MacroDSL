@@ -60,22 +60,24 @@ extern int yydebug;
     SEARCH = 261,                  /* SEARCH  */
     RSEARCH = 262,                 /* RSEARCH  */
     MATCH = 263,                   /* MATCH  */
-    IF = 264,                      /* IF  */
-    ELSE = 265,                    /* ELSE  */
-    WHILE = 266,                   /* WHILE  */
-    CONTINUE = 267,                /* CONTINUE  */
-    BREAK = 268,                   /* BREAK  */
-    RETURN = 269,                  /* RETURN  */
-    ARROW = 270,                   /* ARROW  */
-    EQ = 271,                      /* EQ  */
-    NEQ = 272,                     /* NEQ  */
-    LE = 273,                      /* LE  */
-    GE = 274,                      /* GE  */
-    NUMBER = 275,                  /* NUMBER  */
-    IDENTIFIER = 276,              /* IDENTIFIER  */
-    STRING = 277,                  /* STRING  */
-    REF_STRING = 278,              /* REF_STRING  */
-    REGEX = 279                    /* REGEX  */
+    RMATCH = 264,                  /* RMATCH  */
+    IF = 265,                      /* IF  */
+    ELSE = 266,                    /* ELSE  */
+    WHILE = 267,                   /* WHILE  */
+    CONTINUE = 268,                /* CONTINUE  */
+    BREAK = 269,                   /* BREAK  */
+    RETURN = 270,                  /* RETURN  */
+    ARROW = 271,                   /* ARROW  */
+    EQ = 272,                      /* EQ  */
+    NEQ = 273,                     /* NEQ  */
+    LE = 274,                      /* LE  */
+    GE = 275,                      /* GE  */
+    NUMBER = 276,                  /* NUMBER  */
+    REPEATER = 277,                /* REPEATER  */
+    IDENTIFIER = 278,              /* IDENTIFIER  */
+    STRING = 279,                  /* STRING  */
+    REF_STRING = 280,              /* REF_STRING  */
+    REGEX = 281                    /* REGEX  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif

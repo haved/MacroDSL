@@ -14,10 +14,13 @@
      if (a) b;  c;
     (if (a) b); c;
 
-    if a let x = 5;
+    // This is illegal, makes no sense
+    if (a) let x = 5;
 
-    if 0 else 1
+    if (a) match "hei" => it.last else match "hallo" => it.last;
+    if (a) (match "hei" => it.last) else (match "hallo" => it.last);
 
+    if (a) search {"hei", else => abort} else print("Wowzers")
 
 
 }
@@ -27,12 +30,12 @@ This gives the following ordering, from least to highest precedence
 SCOPEBODY
 0 ;
 1 LET MUT
-IFBODY SEARCHBODY ARGUMENT LETVALUE ASSIGNMENTVALU IFCONDITION
-1 IF ELSE
-4 MACRO
+ifbody argument letvalue assignmentvalu ifcondition search_action_body repetee returnvalue
+2 IF ELSE MACRO SEARCH RSEARCH MATCH RMATCH REPEATER RETURN
 5 =
 6 == !=
 7 < <= > >=
+searchterm
 8 + -
 9 * /
 10 unary -

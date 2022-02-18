@@ -5,9 +5,9 @@
 
 %}
 
-%token LET MUT MACRO SEARCH RSEARCH MATCH IF ELSE WHILE CONTINUE BREAK RETURN ARROW
+%token LET MUT MACRO SEARCH RSEARCH MATCH RMATCH IF ELSE WHILE CONTINUE BREAK RETURN ARROW
 %token EQ NEQ LE GE
-%token NUMBER IDENTIFIER STRING REF_STRING REGEX
+%token NUMBER REPEATER IDENTIFIER STRING REF_STRING REGEX
 
 %nonassoc IF
 %nonassoc ELSE
@@ -17,6 +17,7 @@ program: scopebody { finished = true; };
 
 scopebody: expression;
 expression: expression1;
+          | expression1 ';'; //Allow trailing semicolon
           | expression1 ';' expression;
 
 expression1: expression2;
@@ -28,19 +29,39 @@ expression1: expression2;
 
 ifcondition: expression2;
 ifbody: expression2;
-searchbody: expression2;
 letvalue: expression2;
 assignmentvalue: expression2;
 argument: expression2;
-expression2: expression4;
+repeatee: expression2;
+search_action_body: expression2;
+returnvalue: expression2;
+expression2: expression5;
            | IF '(' ifcondition ')' ifbody %prec IF;
            | IF '(' ifcondition ')' ifbody ELSE ifbody %prec ELSE;
-
-expression4: expression5;
            | MACRO IDENTIFIER '{' scopebody '}';
+           | SEARCH search_body;
+           | RSEARCH search_body;
+           | MATCH search_body;
+           | RMATCH search_body;
+           | REPEATER repeatee;
+           | RETURN returnvalue;
 
 expression5: expression6;
            | expression6 '=' assignmentvalue; //right-to-left
+
+search_body: search_action;
+           | '{' search_list '}';
+
+search_list: search_action;
+           | search_action ','; // Allow trailing comma
+           | search_action ',' search_list;
+           | ELSE ARROW search_action_body;
+           | ELSE ARROW search_action_body ','; // Allow trailing comma
+
+search_action: search_term;
+             | search_term ARROW search_action_body;
+
+search_term: STRING; | REGEX; | REF_STRING; | IDENTIFIER;
 
 expression6: expression7;
            | expression6 EQ expression7; //left-to-right

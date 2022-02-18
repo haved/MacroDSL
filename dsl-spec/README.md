@@ -62,12 +62,14 @@ macro replace_div_figure {
     let start =
     macro find_div_figure {
         let start = search "<div" => it.first;
-        search 
+        search {
             "class=" => 2x f,
-            ">" => return find_div_figure;
-        search
+            ">" => return find_div_figure
+        };
+        search {
             "figure",
-            '"' => return find_div_figure;
+            '"' => return find_div_figure
+        };
         
         return start;
     };
@@ -81,19 +83,19 @@ macro replace_div_figure {
     
     current = start;
     mut width: ?String = null;
-    search
+    search {
         /max-width: ([0-9]+)?/ => width = it.0,
-        "/div>" => current = it.first;
+        "/div>" => current = it.first };
         
     search "/div>";
     delete(start, current);
     
     write('{{< figure src="$src"');
-    if width != null
+    if (width != null)
         write(' width="$width"');
     write(" >}}");
     
-    search "</div>" => delete it;
+    search "</div>" => delete(it);
     write("{{< /figure >}}");
 };
 20x macro1;
