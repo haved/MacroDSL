@@ -7,3 +7,4 @@ tmp/
 scanner.c
 parser.c
 y.tab.c
+dsl-lalr
