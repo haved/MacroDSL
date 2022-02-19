@@ -21,8 +21,6 @@
     if (a) (match "hei" => it.last) else (match "hallo" => it.last);
 
     if (a) search {"hei", else => abort} else print("Wowzers")
-
-
 }
 
 This gives the following ordering, from least to highest precedence
@@ -31,7 +29,7 @@ SCOPEBODY
 0 ;
 1 LET MUT
 ifbody argument letvalue assignmentvalu ifcondition search_action_body repetee returnvalue
-2 IF ELSE MACRO SEARCH RSEARCH MATCH RMATCH REPEATER RETURN
+2 IF ELSE SEARCH RSEARCH MATCH RMATCH REPEATER RETURN
 5 =
 6 == !=
 7 < <= > >=
@@ -41,6 +39,6 @@ searchterm
 10 unary -
 TYPE
 11 . and function callee
-12 {} () IDENTIFIER NUMBER STRING REF_STRING REGEX
+12 {} () IDENTIFIER NUMBER STRING REF_STRING REGEX MACRO
 
 The number tells us what an expressionX can contain (note how bodies can jump back up)

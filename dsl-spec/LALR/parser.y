@@ -15,39 +15,35 @@
 %%
 program: scopebody { finished = true; };
 
-scopebody: expression;
-expression: expression1;
-          | expression1 ';'; //Allow trailing semicolon
-          | expression1 ';' expression;
+scopebody: statement_list;
+statement_list: statement;
+          | statement ';'; //Allow trailing semicolon
+          | statement ';' statement_list;
 
-expression1: expression2;
+statement: expression;
           | LET IDENTIFIER ':' type '=' letvalue;
           | LET IDENTIFIER '=' letvalue;
           | MUT IDENTIFIER ':' type '=' letvalue;
           | MUT IDENTIFIER '=' letvalue;
           | MUT IDENTIFIER ':' type;
 
-ifcondition: expression2;
-ifbody: expression2;
-letvalue: expression2;
-assignmentvalue: expression2;
-argument: expression2;
-repeatee: expression2;
-search_action_body: expression2;
-returnvalue: expression2;
-expression2: expression5;
+ifcondition: expression;
+ifbody: expression;
+letvalue: expression;
+assignmentvalue: expression;
+argument: expression;
+repeatee: expression;
+search_action_body: expression;
+returnvalue: expression;
+expression: expression5;
            | IF '(' ifcondition ')' ifbody %prec IF;
            | IF '(' ifcondition ')' ifbody ELSE ifbody %prec ELSE;
-           | MACRO IDENTIFIER '{' scopebody '}';
            | SEARCH search_body;
            | RSEARCH search_body;
            | MATCH search_body;
            | RMATCH search_body;
-           | REPEATER repeatee;
            | RETURN returnvalue;
-
-expression5: expression6;
-           | expression6 '=' assignmentvalue; //right-to-left
+           | REPEATER repeatee;
 
 search_body: search_action;
            | '{' search_list '}';
@@ -62,6 +58,9 @@ search_action: search_term;
              | search_term ARROW search_action_body;
 
 search_term: STRING; | REGEX; | REF_STRING; | IDENTIFIER;
+
+expression5: expression6;
+           | expression6 '=' assignmentvalue; //right-to-left
 
 expression6: expression7;
            | expression6 EQ expression7; //left-to-right
@@ -90,12 +89,13 @@ expression11: expression12;
             | expression11 '(' argument_list ')';
 
 expression12: '{' scopebody '}';
-            | '(' scopebody ')';
+            | '(' statement ')';
             | IDENTIFIER;
             | NUMBER;
             | STRING;
             | REF_STRING;
             | REGEX;
+            | MACRO IDENTIFIER '{' scopebody '}';
 
 argument_list: ;
              | argument;
