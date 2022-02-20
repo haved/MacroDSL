@@ -37,7 +37,7 @@ search_action_body: expression;
 returnvalue: expression;
 expression: expression5;
            | IF '(' ifcondition ')' ifbody %prec IF;
-           | IF '(' ifcondition ')' ifbody ELSE ifbody %prec ELSE;
+           | endinginif6 %prec ELSE;
            | SEARCH search_body;
            | RSEARCH search_body;
            | MATCH search_body;
@@ -66,22 +66,43 @@ expression6: expression7;
            | expression6 EQ expression7; //left-to-right
            | expression6 NEQ expression7; //left-to-right
 
+endinginif6: endinginif7;
+           | expression6 EQ endinginif7;
+           | expression6 NEQ endinginif7;
+
 expression7: expression8;
            | expression7 '<' expression8; //left-to-right
            | expression7 LE expression8; //left-to-right
            | expression7 '>' expression8; //left-to-right
            | expression7 GE expression8; //left-to-right
 
+endinginif7: endinginif8;
+           | expression7 '<' endinginif8; //left-to-right
+           | expression7 LE endinginif8; //left-to-right
+           | expression7 '>' endinginif8; //left-to-right
+           | expression7 GE endinginif8; //left-to-right
+
 expression8: expression9;
            | expression8 '+' expression9; //left-to-right
            | expression8 '-' expression9; //left-to-right
+
+endinginif8: endinginif9;
+           | expression8 '+' endinginif9; //left-to-right
+           | expression8 '-' endinginif9; //left-to-right
 
 expression9: expression10;
            | expression9 '*' expression10; //left-to-right
            | expression9 '/' expression10; //left-to-right
 
+endinginif9: endinginif10;
+           | expression9 '*' endinginif10; //left-to-right
+           | expression9 '/' endinginif10; //left-to-right
+
 expression10: expression11;
            | '-' expression10;
+
+endinginif10: IF '(' ifcondition ')' ifbody ELSE ifbody;
+           | '-' endinginif10;
 
 type: expression11;
 expression11: expression12;

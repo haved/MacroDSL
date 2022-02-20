@@ -54,51 +54,5 @@ Some other text
 {{< /figure >}}
 ```
 
-```
-let buffer = Buffer(content=#"input");
-current = buffer.Marker(line=1,col=0);
-
-macro replace_div_figure {
-    let start =
-    macro find_div_figure {
-        let start = search "<div" => it.first;
-        search {
-            "class=" => 2x f,
-            ">" => return find_div_figure
-        };
-        search {
-            "figure",
-            '"' => return find_div_figure
-        };
-        
-        return start;
-    };
-    
-    current = start;
-    
-    search 'src='; f;
-    let src_end = search '"' => it.first;
-    let src_begin = rsearch "/" => it.after;
-    let src: String = substring src_begin src_end;
-    
-    current = start;
-    mut width: ?String = null;
-    search {
-        /max-width: ([0-9]+)?/ => width = it.0,
-        "/div>" => current = it.first };
-        
-    search "/div>";
-    delete(start, current);
-    
-    write('{{< figure src="$src"');
-    if (width != null)
-        write(' width="$width"');
-    write(" >}}");
-    
-    search "</div>" => delete(it);
-    write("{{< /figure >}}");
-};
-20x macro1;
-
-```
+See the file 
 
