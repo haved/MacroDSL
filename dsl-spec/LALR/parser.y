@@ -36,8 +36,7 @@ repeatee: expression;
 search_action_body: expression;
 returnvalue: expression;
 expression: expression5;
-           | IF '(' ifcondition ')' ifbody %prec IF;
-           | endinginif6 %prec ELSE;
+           | endinginif6;
            | SEARCH search_body;
            | RSEARCH search_body;
            | MATCH search_body;
@@ -99,10 +98,11 @@ endinginif9: endinginif10;
            | expression9 '/' endinginif10; //left-to-right
 
 expression10: expression11;
-           | '-' expression10;
+            | '-' expression10;
 
-endinginif10: IF '(' ifcondition ')' ifbody ELSE ifbody;
-           | '-' endinginif10;
+endinginif10: IF '(' ifcondition ')' ifbody %prec IF;
+            | IF '(' ifcondition ')' ifbody ELSE ifbody %prec ELSE;
+            | '-' endinginif10;
 
 type: expression11;
 expression11: expression12;

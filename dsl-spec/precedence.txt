@@ -30,6 +30,7 @@ SCOPEBODY
 1 LET MUT
 ifbody argument letvalue assignmentvalu ifcondition search_action_body repetee returnvalue
 2 IF ELSE SEARCH RSEARCH MATCH RMATCH REPEATER RETURN
+4 ENDINGINIF
 5 =
 6 == !=
 7 < <= > >=
