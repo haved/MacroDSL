@@ -77,10 +77,10 @@ expression10: expression11;
 
 ending_in_expr10: IF '(' expression ')' expression %prec IF;
                 | IF '(' expression ')' expression ELSE expression %prec ELSE;
-                | SEARCH simple_search_body;
-                | RSEARCH simple_search_body;
-                | MATCH simple_search_body;
-                | RMATCH simple_search_body;
+                | SEARCH search_action;
+                | RSEARCH search_action;
+                | MATCH search_action;
+                | RMATCH search_action;
                 | RETURN expression;
                 | REPEATER expression;
                 | '-' ending_in_expr10;
@@ -106,9 +106,6 @@ expression12: '{' scopebody '}';
 argument_list: ;
              | expression;
              | expression ',' argument_list;
-
-simple_search_body: search_term
-                  | search_term ARROW expression;
 
 search_list: search_action;
            | search_action ','; // Allow trailing comma
