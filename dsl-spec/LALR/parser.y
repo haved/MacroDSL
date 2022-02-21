@@ -21,53 +21,28 @@ statement_list: statement;
           | statement ';' statement_list;
 
 statement: expression;
-          | LET IDENTIFIER ':' type '=' letvalue;
-          | LET IDENTIFIER '=' letvalue;
-          | MUT IDENTIFIER ':' type '=' letvalue;
-          | MUT IDENTIFIER '=' letvalue;
+          | LET IDENTIFIER ':' type '=' expression;
+          | LET IDENTIFIER '=' expression;
+          | MUT IDENTIFIER ':' type '=' expression;
+          | MUT IDENTIFIER '=' expression;
           | MUT IDENTIFIER ':' type;
 
-ifcondition: expression;
-ifbody: expression;
-letvalue: expression;
-assignmentvalue: expression;
-argument: expression;
-repeatee: expression;
-search_action_body: expression;
-returnvalue: expression;
 expression: expression5;
-           | endinginif6;
-           | SEARCH search_body;
-           | RSEARCH search_body;
-           | MATCH search_body;
-           | RMATCH search_body;
-           | RETURN returnvalue;
-           | REPEATER repeatee;
-
-search_body: search_action;
-           | '{' search_list '}';
-
-search_list: search_action;
-           | search_action ','; // Allow trailing comma
-           | search_action ',' search_list;
-           | ELSE ARROW search_action_body;
-           | ELSE ARROW search_action_body ','; // Allow trailing comma
-
-search_action: search_term;
-             | search_term ARROW search_action_body;
-
-search_term: STRING; | REGEX; | REF_STRING; | IDENTIFIER;
+          | ending_in_expr5;
 
 expression5: expression6;
-           | expression6 '=' assignmentvalue; //right-to-left
+           | expression6 '=' expression5; //right-to-left
+
+ending_in_expr5: ending_in_expr6;
+           | expression6 '=' ending_in_expr5; //right-to-left
 
 expression6: expression7;
            | expression6 EQ expression7; //left-to-right
            | expression6 NEQ expression7; //left-to-right
 
-endinginif6: endinginif7;
-           | expression6 EQ endinginif7;
-           | expression6 NEQ endinginif7;
+ending_in_expr6: ending_in_expr7;
+           | expression6 EQ ending_in_expr7;
+           | expression6 NEQ ending_in_expr7;
 
 expression7: expression8;
            | expression7 '<' expression8; //left-to-right
@@ -75,34 +50,40 @@ expression7: expression8;
            | expression7 '>' expression8; //left-to-right
            | expression7 GE expression8; //left-to-right
 
-endinginif7: endinginif8;
-           | expression7 '<' endinginif8; //left-to-right
-           | expression7 LE endinginif8; //left-to-right
-           | expression7 '>' endinginif8; //left-to-right
-           | expression7 GE endinginif8; //left-to-right
+ending_in_expr7: ending_in_expr8;
+           | expression7 '<' ending_in_expr8; //left-to-right
+           | expression7 LE ending_in_expr8; //left-to-right
+           | expression7 '>' ending_in_expr8; //left-to-right
+           | expression7 GE ending_in_expr8; //left-to-right
 
 expression8: expression9;
            | expression8 '+' expression9; //left-to-right
            | expression8 '-' expression9; //left-to-right
 
-endinginif8: endinginif9;
-           | expression8 '+' endinginif9; //left-to-right
-           | expression8 '-' endinginif9; //left-to-right
+ending_in_expr8: ending_in_expr9;
+           | expression8 '+' ending_in_expr9; //left-to-right
+           | expression8 '-' ending_in_expr9; //left-to-right
 
 expression9: expression10;
            | expression9 '*' expression10; //left-to-right
            | expression9 '/' expression10; //left-to-right
 
-endinginif9: endinginif10;
-           | expression9 '*' endinginif10; //left-to-right
-           | expression9 '/' endinginif10; //left-to-right
+ending_in_expr9: ending_in_expr10;
+           | expression9 '*' ending_in_expr10; //left-to-right
+           | expression9 '/' ending_in_expr10; //left-to-right
 
 expression10: expression11;
             | '-' expression10;
 
-endinginif10: IF '(' ifcondition ')' ifbody %prec IF;
-            | IF '(' ifcondition ')' ifbody ELSE ifbody %prec ELSE;
-            | '-' endinginif10;
+ending_in_expr10: IF '(' expression ')' expression %prec IF;
+                | IF '(' expression ')' expression ELSE expression %prec ELSE;
+                | SEARCH simple_search_body;
+                | RSEARCH simple_search_body;
+                | MATCH simple_search_body;
+                | RMATCH simple_search_body;
+                | RETURN expression;
+                | REPEATER expression;
+                | '-' ending_in_expr10;
 
 type: expression11;
 expression11: expression12;
@@ -110,17 +91,36 @@ expression11: expression12;
             | expression11 '(' argument_list ')';
 
 expression12: '{' scopebody '}';
-            | '(' statement ')';
+            | '(' expression ')';
             | IDENTIFIER;
             | NUMBER;
             | STRING;
             | REF_STRING;
             | REGEX;
             | MACRO IDENTIFIER '{' scopebody '}';
+            | SEARCH '{' search_list '}';
+            | RSEARCH '{' search_list '}';
+            | MATCH '{' search_list '}';
+            | RMATCH '{' search_list '}';
 
 argument_list: ;
-             | argument;
-             | argument ',' argument_list;
+             | expression;
+             | expression ',' argument_list;
+
+simple_search_body: search_term
+                  | search_term ARROW expression;
+
+search_list: search_action;
+           | search_action ','; // Allow trailing comma
+           | search_action ',' search_list;
+           | ELSE ARROW expression;
+           | ELSE ARROW expression ','; // Allow trailing comma
+
+search_action: search_term;
+             | search_term ARROW expression;
+
+search_term: STRING; | REGEX; | REF_STRING; | IDENTIFIER;
+
 
 %%
 

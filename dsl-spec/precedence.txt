@@ -25,21 +25,20 @@
 
 This gives the following ordering, from least to highest precedence
 
-SCOPEBODY
-0 ;
-1 LET MUT
-ifbody argument letvalue assignmentvalu ifcondition search_action_body repetee returnvalue
-2 IF ELSE SEARCH RSEARCH MATCH RMATCH REPEATER RETURN
-4 ENDINGINIF
+statement_list(0): ;
+statement(1): LET MUT
+
+ifbody argument letvalue ifcondition search_action_body repetee returnvalue endinginfour_body
+
+expression(4): ending_in_expr
 5 =
 6 == !=
 7 < <= > >=
-searchterm
 8 + -
 9 * /
 10 unary -
 TYPE
 11 . and function callee
-12 {} () IDENTIFIER NUMBER STRING REF_STRING REGEX MACRO
+12 {} () IDENTIFIER NUMBER STRING REF_STRING REGEX MACRO ENDINGINEXPR
 
 The number tells us what an expressionX can contain (note how bodies can jump back up)
