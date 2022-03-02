@@ -9,8 +9,15 @@ const colors = &@import("colors.zig").current_map;
 pub const Window = struct {
     const This = @This();
 
+    const Flags = packed struct {
+        show_modeline: bool = true,
+        // If true, you can not close the window or change its buffer
+        permanent: bool = false,
+    };
+
     alloc: Allocator,
     buffer: *Buffer,
+    flags: Flags,
     x: i32 = 0,
     y: i32 = 0,
     width: i32 = 0,
@@ -18,8 +25,8 @@ pub const Window = struct {
 
     /// Creates a Window containing the given buffer
     /// The buffer is not owned by the window
-    pub fn init(alloc: Allocator, buffer: *Buffer) !Window {
-        return This{ .alloc = alloc, .buffer = buffer };
+    pub fn init(alloc: Allocator, buffer: *Buffer, flags: Flags) Window {
+        return This{ .alloc = alloc, .buffer = buffer, .flags = flags };
     }
 
     pub fn setBounds(this: *This, x: i32, y: i32, width: i32, height: i32) void {
@@ -36,10 +43,11 @@ pub const Window = struct {
     pub fn render(this: *This) void {
         ray.DrawRectangle(this.x, this.y, this.width, this.height, colors.window_background);
 
-        // Draw modeline
-        const modeline_height = 20;
-        ray.DrawRectangle(this.x, this.y + this.height - modeline_height, this.width, modeline_height, colors.modeline_background);
-        ray.DrawText("Window!", this.x + 4, this.y + this.height - 18, modeline_height - 4, colors.text_color);
+        if (this.flags.show_modeline) {
+            const modeline_height = 20;
+            ray.DrawRectangle(this.x, this.y + this.height - modeline_height, this.width, modeline_height, colors.modeline_background);
+            ray.DrawText("Window!", this.x + 4, this.y + this.height - 18, modeline_height - 4, colors.text_color);
+        }
     }
 
     pub fn deinit(this: *This) void {

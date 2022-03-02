@@ -2,8 +2,6 @@ const std = @import("std");
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
-const Own = @import("../mem.zig").Own;
-
 const ray = @import("raylib");
 const Window = @import("window.zig").Window;
 const colors = &@import("colors.zig").current_map;
@@ -19,7 +17,7 @@ pub const Layout = struct {
         split: SplitContent,
         border: struct {
             alloc: Allocator,
-            child: Own(Layout),
+            child: *Layout,
             border_width: i32,
         },
         empty,
@@ -27,8 +25,8 @@ pub const Layout = struct {
 
     pub const SplitContent = struct {
         alloc: Allocator,
-        layout1: Own(Layout),
-        layout2: Own(Layout),
+        layout1: *Layout,
+        layout2: *Layout,
         split_direction: SplitDirection,
         split_bar_width: i32,
         moveable: bool = true,
@@ -99,7 +97,9 @@ pub const Layout = struct {
     }
 
     pub fn setBounds(this: *This, x: i32, y: i32, width: i32, height: i32) void {
-        if (width < 0 or height < 0) @panic("negative layout bounds");
+        if (x == this.x and y == this.y and width == this.width and height == this.height)
+            return; // Unchanged
+        if (width < 0 or height < 0) std.debug.panic("negative layout bounds", .{});
         this.x = x;
         this.y = y;
         this.width = width;

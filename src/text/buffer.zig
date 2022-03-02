@@ -3,22 +3,25 @@ const Allocator = @import("std").mem.Allocator;
 pub const Buffer = struct {
     const This = @This();
 
+    pub const Flags = packed struct {
+        listable: bool = true,
+        deletable: bool = true,
+        readonly: bool = false,
+    };
+
     alloc: Allocator,
     /// The name of this buffer, owned
     name: []u8,
+    flags: Flags,
 
-    ///content: DefaultRopePlus,
-    pub fn init(name: []const u8, alloc: Allocator) !This {
+    pub fn init(alloc: Allocator, name: []const u8, flags: Flags) !This {
         const name_copy = try alloc.dupe(u8, name);
         errdefer alloc.free(name_copy);
-
-        //var empty_content = try DefaultRopePlus.init(alloc);
-        //errdefer empty_content.deinit();
 
         return This{
             .alloc = alloc,
             .name = name_copy,
-            //.content = empty_content,
+            .flags = flags,
         };
     }
 
