@@ -3,7 +3,7 @@ const mem = std.mem;
 const Allocator = mem.Allocator;
 
 const ray = @import("raylib");
-const Window = @import("window.zig").Window;
+const Window = @import("window.zig");
 const colors = &@import("colors.zig").current_map;
 
 /// The layout to be used for an area of a frame

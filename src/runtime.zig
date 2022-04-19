@@ -12,8 +12,6 @@ buffers: std.ArrayList(*Buffer),
 default_buffer: ?*Buffer = null,
 macro_buffer: ?*Buffer = null,
 message_buffer: ?*Buffer = null,
-// Gets informed about state changes
-frame: ?*Frame = null,
 
 pub fn init(alloc: Allocator) !This {
     const buffers = std.ArrayList(*Buffer).init(alloc);
@@ -63,18 +61,16 @@ pub const BufferDestroyError = error{
     ProtectedBuffer,
 };
 
-/// Destorys a buffer, and also gives notice to the frame about the buffer no longer existing
-/// You may not destroy the default, macro or message buffers
+/// Marks a buffer for deletion, will be deleted at next cleanup
+/// Some buffers are not possible to delete
 pub fn destroyBuffer(this: *This, buffer: *Buffer) BufferDestroyError!void {
     if (!buffer.flags.deletable)
         return BufferDestroyError.ProtectedBuffer;
 
+    // Check that buffer is actually ours
     const maybe_index = mem.indexOfScalar(*Buffer, this.buffers.items, buffer);
-    const index = maybe_index orelse BufferDestroyError.NotABuffer;
-
-    this.buffers.swapRemove(index);
-    if (this.frame) |frame|
-        frame.onBufferDeleted(buffer);
+    const index = maybe_index orelse return BufferDestroyError.NotABuffer;
+    buffer.flags.marked_for_deletion;
 }
 
 pub fn deinit(this: *This) void {

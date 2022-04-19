@@ -7,6 +7,7 @@ pub const Buffer = struct {
         listable: bool = true,
         deletable: bool = true,
         readonly: bool = false,
+        marked_for_deletion: bool = false,
     };
 
     alloc: Allocator,

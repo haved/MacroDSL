@@ -2,7 +2,7 @@ const std = @import("std");
 const Runtime = @import("runtime.zig");
 const Frame = @import("ui/frame.zig").Frame;
 const Layout = @import("ui/layout.zig").Layout;
-const Window = @import("ui/window.zig").Window;
+const Window = @import("ui/window.zig");
 
 pub fn main() !void {
     var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
@@ -14,17 +14,14 @@ pub fn main() !void {
     var frame = try Frame.init(alloc, &runtime, 1600, 900);
     defer frame.deinit();
 
-    runtime.frame = &frame;
-    defer runtime.frame = null;
-
     frame.setLayout(try makeDefaultLayout(&frame, alloc));
     frame.loop();
 }
 
 fn makeDefaultLayout(frame: *Frame, alloc: std.mem.Allocator) !Layout {
-    const main_window = Window.init(alloc, try frame.runtime.getDefaultBuffer(), .{});
-    const macro_window = Window.init(alloc, try frame.runtime.getMacroBuffer(), .{});
-    const message_window = Window.init(alloc, try frame.runtime.getMessageBuffer(), .{
+    const main_window = Window.init(frame, try frame.runtime.getDefaultBuffer(), .{});
+    const macro_window = Window.init(frame, try frame.runtime.getMacroBuffer(), .{});
+    const message_window = Window.init(frame, try frame.runtime.getMessageBuffer(), .{
         .show_modeline = false,
         .permanent = true,
     });
@@ -35,10 +32,10 @@ fn makeDefaultLayout(frame: *Frame, alloc: std.mem.Allocator) !Layout {
             Layout.SplitDirection.vertical,
             8,
             true,
+            100, // Each gets a minimum width of 100
             100,
-            100,
-            200,
-            100,
+            2, // Desire 2:1 ratio by default
+            1,
             alloc,
         );
         errdefer main_split.deinit();
@@ -49,8 +46,8 @@ fn makeDefaultLayout(frame: *Frame, alloc: std.mem.Allocator) !Layout {
             0,
             false,
             0,
-            32,
-            1,
+            32, // Layout 2 min height
+            1, // Desire 1:0 ratio, but with min height
             0,
             alloc,
         );
