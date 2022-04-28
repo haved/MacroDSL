@@ -8,14 +8,30 @@ const Frame = @import("ui/frame.zig").Frame;
 const This = @This();
 
 alloc: Allocator,
-buffers: std.ArrayList(*Buffer),
+buffers: std.ArrayListUnmanaged(*Buffer) = .{},
 default_buffer: ?*Buffer = null,
 macro_buffer: ?*Buffer = null,
 message_buffer: ?*Buffer = null,
 
+// We don't own the frames, we just notify them about removed buffers
+frames: std.ArrayListUnmanaged(*Frame) = .{},
+
 pub fn init(alloc: Allocator) !This {
-    const buffers = std.ArrayList(*Buffer).init(alloc);
-    return This{ .alloc = alloc, .buffers = buffers };
+    return This{ .alloc = alloc };
+}
+
+/// Subscribes the frame to runtime events.
+/// Also prevents the runtime from being closed until all frames are removed.
+pub fn addListeningFrame(this: *This, frame: *Frame) !void {
+    try this.frames.append(this.alloc, frame);
+}
+
+/// Removes the given frame from the list of listening frames.
+/// Errors if the frame given doesn't exist as a listener.
+pub fn removeListeningFrame(this: *This, frame: *Frame) !void {
+    const maybe_index = mem.indexOfScalar(*Frame, this.frames.items, frame);
+    const index = maybe_index orelse return error.NotFound;
+    _ = this.frames.swapRemove(index);
 }
 
 pub fn getDefaultBuffer(this: *This) !*Buffer {
@@ -45,7 +61,7 @@ pub fn createBuffer(this: *This, name: []const u8, flags: Buffer.Flags) !*Buffer
     buffer.* = try Buffer.init(this.alloc, name, flags);
     errdefer buffer.deinit();
 
-    try this.buffers.append(buffer);
+    try this.buffers.append(this.alloc, buffer);
 
     return buffer;
 }
@@ -57,7 +73,7 @@ pub fn hasBuffer(this: *This, buffer: *Buffer) bool {
 }
 
 pub const BufferDestroyError = error{
-    NotABuffer,
+    NotFound,
     ProtectedBuffer,
 };
 
@@ -70,13 +86,27 @@ pub fn destroyBuffer(this: *This, buffer: *Buffer) BufferDestroyError!void {
     // Check that buffer is actually ours
     const maybe_index = mem.indexOfScalar(*Buffer, this.buffers.items, buffer);
     const index = maybe_index orelse return BufferDestroyError.NotABuffer;
-    buffer.flags.marked_for_deletion;
+
+    // Remove the buffer from the list and memory
+    this.buffers.swapRemove(index);
+    this.alloc.delete(buffer);
+
+    // Notify all frames about the removal
+    for (this.frames.items) |frame| {
+        frame.onBufferDeleted(buffer);
+    }
 }
 
-pub fn deinit(this: *This) void {
+/// Closes the runtime and frees everything it owned.
+/// Can not be done if any frames are still attached to it.
+pub fn deinit(this: *This) !void {
+    if (this.frames.items.len != 0)
+        return error.RuntimeHasOpenFrames;
+
     for (this.buffers.items) |buffer| {
         buffer.deinit();
         this.alloc.destroy(buffer);
     }
-    this.buffers.deinit();
+    this.buffers.deinit(this.alloc);
+    this.frames.deinit(this.alloc);
 }

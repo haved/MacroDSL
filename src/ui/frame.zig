@@ -17,18 +17,30 @@ pub const Frame = struct {
     runtime: *Runtime, // not owned
     layout: Layout,
 
-    pub fn init(alloc: Allocator, runtime: *Runtime, width: c_int, height: c_int) !This {
+    // Init function, requires the Frame to already have an address
+    pub fn init(this: *This, alloc: Allocator, runtime: *Runtime, width: c_int, height: c_int) !void {
         ray.InitWindow(width, height, "MacroDSL");
         ray.SetWindowState(ray.FLAG_WINDOW_RESIZABLE);
         ray.SetWindowMinSize(300, 200);
         ray.SetTargetFPS(60);
         errdefer ray.CloseWindow();
 
-        return This{ .alloc = alloc, .runtime = runtime, .layout = .{
+        try runtime.addListeningFrame(this);
+
+        this.alloc = alloc;
+        this.runtime = runtime;
+        this.layout = .{
             .content = .empty,
             .width = ray.GetScreenWidth(),
             .height = ray.GetScreenHeight(),
-        } };
+        };
+    }
+
+    /// Clean up the frame and all it owns
+    pub fn deinit(this: *This) void {
+        this.runtime.removeListeningFrame(this) catch unreachable;
+        this.layout.deinit();
+        ray.CloseWindow();
     }
 
     /// Replace the current layout with a new one
@@ -63,11 +75,5 @@ pub const Frame = struct {
 
     pub fn onBufferDeleted(this: *This, buffer: *Buffer) void {
         this.layout.onBufferDeleted(buffer);
-    }
-
-    /// Clean up the frame and all it owns
-    pub fn deinit(this: *This) void {
-        this.layout.deinit();
-        ray.CloseWindow();
     }
 };

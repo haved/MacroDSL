@@ -11,10 +11,9 @@ pub const Flags = packed struct {
     show_modeline: bool = true,
     // If true, you can not close the window or change its buffer
     permanent: bool = false,
-    marked_for_deletion: bool = false,
 };
 
-frame: Frame,
+frame: *Frame,
 buffer: *Buffer,
 flags: Flags,
 x: i32 = 0,
@@ -24,7 +23,7 @@ height: i32 = 0,
 
 /// Creates a Window containing the given buffer
 /// The buffer is not owned by the window
-pub fn init(frame: *Frame, buffer: *Buffer, flags: Flags) Window {
+pub fn init(frame: *Frame, buffer: *Buffer, flags: Flags) This {
     return This{ .frame = frame, .buffer = buffer, .flags = flags };
 }
 
@@ -36,10 +35,7 @@ pub fn setBounds(this: *This, x: i32, y: i32, width: i32, height: i32) void {
 }
 
 pub fn update(this: *This) void {
-    if (this.buffer.flags.marked_for_deletion) {
-        this.flags.marked_for_deletion = true;
-        return;
-    }
+    _ = this;
 }
 
 pub fn render(this: *This) void {

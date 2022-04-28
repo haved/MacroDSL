@@ -9,12 +9,19 @@ pub fn main() !void {
     defer std.debug.assert(!gpalloc.deinit());
     const alloc = gpalloc.allocator();
 
+    // Create a runtime
     var runtime = try Runtime.init(alloc);
-    defer runtime.deinit();
-    var frame = try Frame.init(alloc, &runtime, 1600, 900);
+    defer runtime.deinit() catch unreachable;
+
+    // Create a frame, attach it to the runtime
+    var frame: Frame = undefined;
+    try frame.init(alloc, &runtime, 1600, 900);
     defer frame.deinit();
 
+    // Give the frame the default layout
     frame.setLayout(try makeDefaultLayout(&frame, alloc));
+
+    // Show the frame until its closed
     frame.loop();
 }
 
