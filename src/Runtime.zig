@@ -1,9 +1,17 @@
+//! This struct constains the state of the program.
+//! It owns all open buffers, and has a two-way reference to the frame, if open.
+//!
+//! Thread safety:
+//! This struct is in no way thread safe, so use locks if multithreading access.
+//! Buffers have their own locks, so they live their own lives.
+//! However, if deleting buffers, you must have exclusive access to /both/ the buffer and the runtime.
+
 const std = @import("std");
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
-const Buffer = @import("text/buffer.zig").Buffer;
-const Frame = @import("ui/frame.zig").Frame;
+const Buffer = @import("text/Buffer.zig");
+const Frame = @import("ui/Frame.zig");
 
 const This = @This();
 
@@ -13,25 +21,45 @@ default_buffer: ?*Buffer = null,
 macro_buffer: ?*Buffer = null,
 message_buffer: ?*Buffer = null,
 
-// We don't own the frames, we just notify them about removed buffers
-frames: std.ArrayListUnmanaged(*Frame) = .{},
+/// The frame currently showing the runtime,
+/// unless running in a headless mode
+frame: ?*Frame = null,
 
 pub fn init(alloc: Allocator) !This {
     return This{ .alloc = alloc };
 }
 
-/// Subscribes the frame to runtime events.
-/// Also prevents the runtime from being closed until all frames are removed.
-pub fn addListeningFrame(this: *This, frame: *Frame) !void {
-    try this.frames.append(this.alloc, frame);
+/// Closes the runtime and frees everything it owned.
+/// Can not be done if the frame is still attached to it.
+pub fn deinit(this: *This) !void {
+    if (this.frame != null)
+        return error.RuntimeHasOpenFrame;
+
+    for (this.buffers.items) |buffer| {
+        buffer.deinit();
+        this.alloc.destroy(buffer);
+    }
+    this.buffers.deinit(this.alloc);
 }
 
-/// Removes the given frame from the list of listening frames.
-/// Errors if the frame given doesn't exist as a listener.
-pub fn removeListeningFrame(this: *This, frame: *Frame) !void {
-    const maybe_index = mem.indexOfScalar(*Frame, this.frames.items, frame);
-    const index = maybe_index orelse return error.NotFound;
-    _ = this.frames.swapRemove(index);
+/// Creates a frame for this runtime. There can only be one.
+/// Must be destroyed using destroyFrame().
+/// The calling thread owns the OpenGL context
+pub fn createFrame(this: *This, width: c_int, height: c_int) !*Frame {
+    if (this.frame != null) return error.RuntimeHasFrame;
+
+    this.frame = try this.alloc.create(Frame);
+    this.frame.?.* = try Frame.init(this, width, height);
+    return this.frame.?;
+}
+
+/// Destroys the frame
+pub fn destroyFrame(this: *This) !void {
+    if (this.frame) |frame| {
+        frame.deinit();
+        this.alloc.destroy(frame);
+        this.frame = null;
+    } else return error.RuntimeHasNoFrame;
 }
 
 pub fn getDefaultBuffer(this: *This) !*Buffer {
@@ -91,22 +119,8 @@ pub fn destroyBuffer(this: *This, buffer: *Buffer) BufferDestroyError!void {
     this.buffers.swapRemove(index);
     this.alloc.delete(buffer);
 
-    // Notify all frames about the removal
-    for (this.frames.items) |frame| {
+    // Notify the frame about the removal
+    if (this.frame) |frame| {
         frame.onBufferDeleted(buffer);
     }
-}
-
-/// Closes the runtime and frees everything it owned.
-/// Can not be done if any frames are still attached to it.
-pub fn deinit(this: *This) !void {
-    if (this.frames.items.len != 0)
-        return error.RuntimeHasOpenFrames;
-
-    for (this.buffers.items) |buffer| {
-        buffer.deinit();
-        this.alloc.destroy(buffer);
-    }
-    this.buffers.deinit(this.alloc);
-    this.frames.deinit(this.alloc);
 }

@@ -15,29 +15,29 @@ const NodeAllocator = @import("node_allocator.zig").NodeAllocator;
 ///
 /// Leaf nodes can hold markers, that stay in place even if the text around it is modified.
 pub fn RopePlus(leaf_size: usize, internal_size: usize) type {
-    const LeafNode = struct {
-        pub const content_size_type = u8;
-        pub const max_content_size = leaf_size - @sizeOf(*IntrNode) - 2 * @sizeOf(*LeafNode) - 2 * @sizeOf(content_size_type);
-
-        parent: *IntrNode,
-        left_node: ?*LeafNode,
-        right_node: ?*LeafNode,
-        content_size: content_size_type,
-        newline_count: content_size_type,
-        content: [max_content_size]u8,
-    };
-    const IntrNode = struct {};
-
-    comptime {
-        assert(std.math.maxInt(content_size_type) >= max_content_size);
-        assert(@sizeOf(LeafNode) == leaf_size);
-        assert(@sizeOf(IntrNode) == internal_size);
-    }
-
     return struct {
         const This = @This();
-        pub const LeafNode = LeafNode;
-        pub const IntrNode = IntrNode;
+        const LeafNode = struct {
+            pub const content_size_type = u8;
+            pub const max_content_size = leaf_size - @sizeOf(*IntrNode) - 2 * @sizeOf(*LeafNode) - 2 * @sizeOf(content_size_type);
+
+            parent: *IntrNode,
+            left_node: ?*LeafNode,
+            right_node: ?*LeafNode,
+            content_size: content_size_type,
+            newline_count: content_size_type,
+            content: [max_content_size]u8,
+
+            comptime {
+                assert(std.math.maxInt(LeafNode.content_size_type) >= max_content_size);
+            }
+        };
+        const IntrNode = struct { parent: *IntrNode };
+
+        comptime {
+            assert(@sizeOf(LeafNode) == leaf_size);
+            assert(@sizeOf(IntrNode) == internal_size);
+        }
 
         leaf_alloc: NodeAllocator(LeafNode),
         intr_alloc: NodeAllocator(IntrNode),

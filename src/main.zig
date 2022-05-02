@@ -1,8 +1,8 @@
 const std = @import("std");
-const Runtime = @import("runtime.zig");
-const Frame = @import("ui/frame.zig").Frame;
-const Layout = @import("ui/layout.zig").Layout;
-const Window = @import("ui/window.zig");
+const Runtime = @import("Runtime.zig");
+const Frame = @import("ui/Frame.zig");
+const Layout = @import("ui/Layout.zig");
+const Window = @import("ui/Window.zig");
 
 pub fn main() !void {
     var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
@@ -14,14 +14,13 @@ pub fn main() !void {
     defer runtime.deinit() catch unreachable;
 
     // Create a frame, attach it to the runtime
-    var frame: Frame = undefined;
-    try frame.init(alloc, &runtime, 1600, 900);
-    defer frame.deinit();
+    var frame = try runtime.createFrame(1600, 900);
+    defer runtime.destroyFrame() catch unreachable;
 
     // Give the frame the default layout
-    frame.setLayout(try makeDefaultLayout(&frame, alloc));
+    frame.setLayout(try makeDefaultLayout(frame, alloc));
 
-    // Show the frame until its closed
+    // Show the interactive frame until it is closed
     frame.loop();
 }
 

@@ -1,8 +1,8 @@
 const std = @import("std");
 
 const ray = @import("raylib");
-const Frame = @import("frame.zig").Frame;
-const Buffer = @import("../text/buffer.zig").Buffer;
+const Frame = @import("Frame.zig");
+const Buffer = @import("../text/Buffer.zig");
 const colors = &@import("colors.zig").current_map;
 
 const This = @This();
