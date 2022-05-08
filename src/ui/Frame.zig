@@ -8,8 +8,9 @@ const Allocator = mem.Allocator;
 const ArrayList = std.ArrayList;
 const ray = @import("raylib");
 
-const Layout = @import("Layout.zig");
+const shaders = @import("shaders.zig");
 const colors = &@import("colors.zig").current_map;
+const Layout = @import("Layout.zig");
 const Runtime = @import("../Runtime.zig");
 const Buffer = @import("../text/Buffer.zig");
 
@@ -22,10 +23,13 @@ layout: Layout,
 /// Init function, should only be called from Runtime.createFrame()
 pub fn init(runtime: *Runtime, width: c_int, height: c_int) !This {
     ray.InitWindow(width, height, "MacroDSL");
+    errdefer ray.CloseWindow();
     ray.SetWindowState(ray.FLAG_WINDOW_RESIZABLE);
     ray.SetWindowMinSize(300, 200);
     ray.SetTargetFPS(60);
-    errdefer ray.CloseWindow();
+
+    try shaders.loadShaders();
+    errdefer shaders.unloadShaders();
 
     return This{
         .runtime = runtime,
@@ -41,6 +45,7 @@ pub fn init(runtime: *Runtime, width: c_int, height: c_int) !This {
 /// Should only be called from Runtime.destroyFrame().
 pub fn deinit(this: *This) void {
     this.layout.deinit();
+    shaders.unloadShaders();
     ray.CloseWindow();
 }
 

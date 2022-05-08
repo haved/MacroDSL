@@ -23,7 +23,7 @@ message_buffer: ?*Buffer = null,
 
 /// The frame currently showing the runtime,
 /// unless running in a headless mode
-frame: ?*Frame = null,
+frame: ?Frame = null,
 
 pub fn init(alloc: Allocator) !This {
     return This{ .alloc = alloc };
@@ -48,16 +48,14 @@ pub fn deinit(this: *This) !void {
 pub fn createFrame(this: *This, width: c_int, height: c_int) !*Frame {
     if (this.frame != null) return error.RuntimeHasFrame;
 
-    this.frame = try this.alloc.create(Frame);
-    this.frame.?.* = try Frame.init(this, width, height);
-    return this.frame.?;
+    this.frame = try Frame.init(this, width, height);
+    return &this.frame.?;
 }
 
 /// Destroys the frame
 pub fn destroyFrame(this: *This) !void {
-    if (this.frame) |frame| {
+    if (this.frame) |*frame| {
         frame.deinit();
-        this.alloc.destroy(frame);
         this.frame = null;
     } else return error.RuntimeHasNoFrame;
 }

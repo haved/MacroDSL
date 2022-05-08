@@ -1,5 +1,5 @@
 const Allocator = @import("std").mem.Allocator;
-const RopePlus = @import("ropeplus.zig").RopePlus;
+//const RopePlus = @import("ropeplus.zig").RopePlus;
 
 const This = @This();
 
@@ -13,7 +13,7 @@ alloc: Allocator,
 /// The name of this buffer, owned
 name: []u8,
 flags: Flags,
-content: RopePlus,
+//content: RopePlus,
 
 pub fn init(alloc: Allocator, name: []const u8, flags: Flags) !This {
     const name_copy = try alloc.dupe(u8, name);
