@@ -56,6 +56,7 @@ pub fn render(this: *This) void {
     }
 
     shaders.textGrid.bind();
+    shaders.textGrid.setUniform("gridSize", .{ 20.0, 30.0 });
     ray.DrawRectangle(this.x, this.y, this.width, grid_height, ray.WHITE);
     shaders.textGrid.unbind();
 }

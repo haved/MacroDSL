@@ -2,7 +2,7 @@
 
 // Input vertex attributes (from vertex shader)
 in vec2 fragTexCoord;
-// in vec4 fragColor;
+in vec4 fragColor;
 
 uniform sampler2D texture0;
 uniform vec4 backgroundColor;
@@ -15,6 +15,6 @@ out vec4 finalColor;
 
 void main()
 {
-    vec2 cell = floor(gradTexCoord * gridSize / cellSize);
+    vec2 cell = floor(fragTexCoord * gridSize / cellSize);
     finalColor = vec4(cell.x / 20, cell.y / 20, 0, 1);
 }

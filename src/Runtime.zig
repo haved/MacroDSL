@@ -111,14 +111,31 @@ pub fn destroyBuffer(this: *This, buffer: *Buffer) BufferDestroyError!void {
 
     // Check that buffer is actually ours
     const maybe_index = mem.indexOfScalar(*Buffer, this.buffers.items, buffer);
-    const index = maybe_index orelse return BufferDestroyError.NotABuffer;
+    const index = maybe_index orelse return BufferDestroyError.NotFound;
 
     // Remove the buffer from the list and memory
-    this.buffers.swapRemove(index);
-    this.alloc.delete(buffer);
+    _ = this.buffers.swapRemove(index);
+    buffer.deinit();
+    this.alloc.destroy(buffer);
 
     // Notify the frame about the removal
-    if (this.frame) |frame| {
+    if (this.frame) |*frame| {
         frame.onBufferDeleted(buffer);
     }
+}
+
+const testing = std.testing;
+test "Runtime creation" {
+    var runtime = try init(testing.allocator);
+    _ = try runtime.getMessageBuffer();
+    defer runtime.deinit() catch unreachable;
+}
+
+test "Buffer destruction" {
+    var runtime = try init(testing.allocator);
+    const default_buffer = try runtime.getDefaultBuffer();
+    try testing.expect(runtime.hasBuffer(default_buffer));
+    try runtime.destroyBuffer(default_buffer);
+    try testing.expect(!runtime.hasBuffer(default_buffer));
+    defer runtime.deinit() catch unreachable;
 }

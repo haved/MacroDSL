@@ -4,6 +4,7 @@ const Allocator = mem.Allocator;
 
 const ray = @import("raylib");
 const Window = @import("Window.zig");
+const Buffer = @import("../text/Buffer.zig");
 const colors = &@import("colors.zig").current_map;
 
 const This = @This();
@@ -94,6 +95,29 @@ pub fn initBorderLayout(child: This, border_width: i32, alloc: Allocator) !This 
     } } };
 }
 
+/// Deinit the layout, and every sub-layout and window it owns
+pub fn deinit(this: *This) void {
+    switch (this.content) {
+        .empty => {},
+        .window => |*window| {
+            window.deinit();
+        },
+        .split => |*split| {
+            split.layout1.deinit();
+            split.layout2.deinit();
+            split.alloc.destroy(split.layout1);
+            split.alloc.destroy(split.layout2);
+        },
+        .border => |border| {
+            border.child.deinit();
+            border.alloc.destroy(border.child);
+        },
+    }
+}
+
+/// Sets the position and size in *window coordinates*
+/// Will recalculate layout if anything has changed,
+/// which in turn propagates into any children
 pub fn setBounds(this: *This, x: i32, y: i32, width: i32, height: i32) void {
     if (x == this.x and y == this.y and width == this.width and height == this.height)
         return; // Unchanged
@@ -269,22 +293,8 @@ pub fn render(this: *This) void {
     }
 }
 
-/// Deinit the layout, and every sub-layout and window it owns
-pub fn deinit(this: *This) void {
-    switch (this.content) {
-        .empty => {},
-        .window => |*window| {
-            window.deinit();
-        },
-        .split => |*split| {
-            split.layout1.deinit();
-            split.layout2.deinit();
-            split.alloc.destroy(split.layout1);
-            split.alloc.destroy(split.layout2);
-        },
-        .border => |border| {
-            border.child.deinit();
-            border.alloc.destroy(border.child);
-        },
-    }
+/// Give a heads up to all layouts+windows in the tree that the buffer is no longer valid memory.
+pub fn onBufferDeleted(this: *This, buffer: *Buffer) void {
+    _ = this;
+    _ = buffer;
 }

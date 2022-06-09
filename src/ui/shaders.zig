@@ -18,18 +18,23 @@ fn Shader(vertex: ?[]const u8, fragment: ?[]const u8, variables: []const [:0]con
 
             const handle = ray.LoadShaderFromMemory(vertex_code, fragment_code);
             this.handle = handle;
+            errdefer this.unload();
+
+            this.bind();
 
             inline for (variables) |variable, i| {
                 const loc = ray.GetShaderLocation(handle, variable);
-                if (loc == -1)
-                    return error.UnknownShaderUniform;
+                // If the uniform is not found, or not used in the shader, we get -1
+                // raylib already gives a warning about this, no need to crash and burn
                 this.variable_locations[i] = loc;
             }
         }
 
         fn unload(this: *This) void {
-            ray.UnloadShader(this.handle orelse unreachable);
-            this.handle = null;
+            if (this.handle) |handle| {
+                ray.UnloadShader(handle);
+                this.handle = null;
+            }
         }
 
         pub fn bind(this: *This) void {
@@ -49,33 +54,42 @@ fn Shader(vertex: ?[]const u8, fragment: ?[]const u8, variables: []const [:0]con
             unreachable;
         }
 
-        fn makeSetterFunction(T: type, uniform_type: c_int) fn (this: *This, comptime name: [:0]const u8, value: T) void {
-            const typ = struct {
-                fn func(this: *This, comptime name: [:0]const u8, value: T) void {
-                    ray.SetShaderValue(
-                        this.handle orelse unreachable,
-                        variableLocationFromName(name),
-                        &value,
-                        uniform_type,
-                    );
-                }
-            };
-            return typ.func;
+        pub fn setUniform(this: *This, comptime name: [:0]const u8, comptime T: type, value: T) void {
+            ray.SetShaderValue(
+                this.handle orelse unreachable,
+                variableLocationFromName(name),
+                &value,
+                comptime switch (T) {
+                    .Float => ray.SHADER_UNIFORM_FLOAT,
+                    .Integer => ray.SHADER_UNIFORM_INT,
+                    .Array => |array| switch (array.child) {
+                        .Float => switch (array.len) {
+                            2 => ray.SHADER_UNIFORM_VEC2,
+                            3 => ray.SHADER_UNIFORM_VEC3,
+                            4 => ray.SHADER_UNIFORM_VEC4,
+                        },
+                        .Integer => switch (array.len) {
+                            2 => ray.SHADER_UNIFORM_IVEC2,
+                            3 => ray.SHADER_UNIFORM_IVEC3,
+                            4 => ray.SHADER_UNIFORM_IVEC4,
+                        },
+                    },
+                },
+            );
         }
 
-        pub const setFloat = makeSetterFunction(f32, ray.SHADER_UNIFORM_FLOAT);
-        pub const setVec2 = makeSetterFunction([2]f32, ray.SHADER_UNIFORM_VEC2);
-        pub const setVec3 = makeSetterFunction([3]f32, ray.SHADER_UNIFORM_VEC3);
-        pub const setVec4 = makeSetterFunction([4]f32, ray.SHADER_UNIFORM_VEC4);
-        pub const setInt = makeSetterFunction(u32, ray.SHADER_UNIFORM_INT);
-        pub const setIVec2 = makeSetterFunction([2]u32, ray.SHADER_UNIFORM_IVEC2);
-        pub const setIVec3 = makeSetterFunction([3]u32, ray.SHADER_UNIFORM_IVEC3);
-        pub const setIVec4 = makeSetterFunction([4]u32, ray.SHADER_UNIFORM_IVEC4);
-        pub const setSampler2D = makeSetterFunction(c_int, ray.SHADER_UNIFORM_SAMPLER2D);
+        pub fn setSampler2D(comptime name: [:0]const u8, texture: c_int) void {
+            ray.SetShaderValue(
+                this.handle orelse unreachable,
+                variableLocationFromName(name),
+                &texture,
+                ray.SHADER_UNIFORM_SAMPLE2D,
+            );
+        }
     };
 }
 
-pub var textGrid: Shader(null, "../glsl/textGrid.fs", &[_][:0]const u8{
+pub var textGrid: Shader("../glsl/textGrid.vs", "../glsl/textGrid.fs", &[_][:0]const u8{
     "backgroundColor",
     "foregroundColor",
     "gridSize",
