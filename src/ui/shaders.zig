@@ -46,46 +46,36 @@ fn Shader(vertex: ?[]const u8, fragment: ?[]const u8, variables: []const [:0]con
             ray.EndShaderMode();
         }
 
-        fn variableLocationFromName(comptime name: [:0]const u8) u32 {
+        fn variableIndexFromName(comptime name: [:0]const u8) usize {
             for (variables) |variable, i| {
-                if (std.mem.eql(name, variable))
+                if (std.mem.eql(u8, name, variable))
                     return i;
             }
             unreachable;
         }
 
-        pub fn setUniform(this: *This, comptime name: [:0]const u8, comptime T: type, value: T) void {
-            ray.SetShaderValue(
-                this.handle orelse unreachable,
-                variableLocationFromName(name),
-                &value,
-                comptime switch (T) {
-                    .Float => ray.SHADER_UNIFORM_FLOAT,
-                    .Integer => ray.SHADER_UNIFORM_INT,
-                    .Array => |array| switch (array.child) {
-                        .Float => switch (array.len) {
-                            2 => ray.SHADER_UNIFORM_VEC2,
-                            3 => ray.SHADER_UNIFORM_VEC3,
-                            4 => ray.SHADER_UNIFORM_VEC4,
-                        },
-                        .Integer => switch (array.len) {
-                            2 => ray.SHADER_UNIFORM_IVEC2,
-                            3 => ray.SHADER_UNIFORM_IVEC3,
-                            4 => ray.SHADER_UNIFORM_IVEC4,
-                        },
-                    },
-                },
-            );
+        fn makeSetterFunction(comptime T: type, uniform_type: c_int) type {
+            return struct {
+                fn invoke(this: *This, comptime name: [:0]const u8, value: T) void {
+                    ray.SetShaderValue(
+                        this.handle orelse unreachable,
+                        this.variable_locations[variableIndexFromName(name)],
+                        &value,
+                        uniform_type,
+                    );
+                }
+            };
         }
 
-        pub fn setSampler2D(comptime name: [:0]const u8, texture: c_int) void {
-            ray.SetShaderValue(
-                this.handle orelse unreachable,
-                variableLocationFromName(name),
-                &texture,
-                ray.SHADER_UNIFORM_SAMPLE2D,
-            );
-        }
+        pub const setFloat = makeSetterFunction(f32, ray.SHADER_UNIFORM_FLOAT).invoke;
+        pub const setVec2 = makeSetterFunction([2]f32, ray.SHADER_UNIFORM_VEC2).invoke;
+        pub const setVec3 = makeSetterFunction([3]f32, ray.SHADER_UNIFORM_VEC3).invoke;
+        pub const setVec4 = makeSetterFunction([4]f32, ray.SHADER_UNIFORM_VEC4).invoke;
+        pub const setInt = makeSetterFunction(u32, ray.SHADER_UNIFORM_INT).invoke;
+        pub const setIVec2 = makeSetterFunction([2]u32, ray.SHADER_UNIFORM_IVEC2).invoke;
+        pub const setIVec3 = makeSetterFunction([3]u32, ray.SHADER_UNIFORM_IVEC3).invoke;
+        pub const setIVec4 = makeSetterFunction([4]u32, ray.SHADER_UNIFORM_IVEC4).invoke;
+        pub const setSampler2D = makeSetterFunction(c_int, ray.SHADER_UNIFORM_SAMPLER2D).invoke;
     };
 }
 

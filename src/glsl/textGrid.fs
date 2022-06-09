@@ -16,5 +16,5 @@ out vec4 finalColor;
 void main()
 {
     vec2 cell = floor(fragTexCoord * gridSize / cellSize);
-    finalColor = vec4(cell.x / 20, cell.y / 20, 0, 1);
+    finalColor = vec4(cell.xy * 0.03, 0, 1);
 }

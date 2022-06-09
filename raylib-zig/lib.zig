@@ -33,6 +33,7 @@ pub fn Pkg(pkgdir: []const u8) type {
             exe.linkLibC();
 
             exe.addPackagePath("raylib", pkgdir ++ "/lib/raylib-zig.zig");
+            exe.addPackagePath("rlgl", pkgdir ++ "/lib/rlgl-zig.zig");
             exe.addPackagePath("raylib-math", pkgdir ++ "/lib/raylib-zig-math.zig");
         }
     };

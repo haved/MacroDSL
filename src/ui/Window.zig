@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const ray = @import("raylib");
+const draw = @import("draw.zig");
 const Frame = @import("Frame.zig");
 const Buffer = @import("../text/Buffer.zig");
 const colors = &@import("colors.zig").current_map;
@@ -56,7 +57,8 @@ pub fn render(this: *This) void {
     }
 
     shaders.textGrid.bind();
-    shaders.textGrid.setUniform("gridSize", .{ 20.0, 30.0 });
-    ray.DrawRectangle(this.x, this.y, this.width, grid_height, ray.WHITE);
+    shaders.textGrid.setVec2("gridSize", .{ @intToFloat(f32, this.width), @intToFloat(f32, this.height) });
+    shaders.textGrid.setVec2("cellSize", .{ 20.0, 30.0 });
+    draw.texturedRectangle(this.x, this.y, this.width, this.height, ray.WHITE);
     shaders.textGrid.unbind();
 }
