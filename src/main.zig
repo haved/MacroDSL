@@ -3,6 +3,7 @@ const Runtime = @import("Runtime.zig");
 const Frame = @import("ui/Frame.zig");
 const Layout = @import("ui/Layout.zig");
 const Window = @import("ui/Window.zig");
+const fonts = @import("ui/fonts.zig");
 
 pub fn main() !void {
     var gpalloc = std.heap.GeneralPurposeAllocator(.{}){};
@@ -16,6 +17,11 @@ pub fn main() !void {
     // Create a frame, attach it to the runtime
     var frame = try runtime.createFrame(1600, 900);
     defer runtime.destroyFrame() catch unreachable;
+
+    try fonts.init(alloc);
+    defer fonts.deinit();
+    const default_font = fonts.loadFont("Source Code Pro", "res/SourceCodePro.otf", 24);
+    default_font.deinit();
 
     // Give the frame the default layout
     frame.setLayout(try makeDefaultLayout(frame, alloc));

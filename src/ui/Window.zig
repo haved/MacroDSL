@@ -7,6 +7,8 @@ const Buffer = @import("../text/Buffer.zig");
 const colors = &@import("colors.zig").current_map;
 const shaders = @import("shaders.zig");
 
+const Font = @import("Font.zig");
+
 const This = @This();
 
 pub const Flags = packed struct {
