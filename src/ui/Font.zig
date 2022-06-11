@@ -92,6 +92,8 @@ pub fn init(alloc: std.mem.Allocator, file_name: [:0]const u8, font_size: u32) !
     };
 }
 
+/// Unloads the font texture from the GPU
+/// Must be called from the OpenGL thread
 pub fn deinit(this: *This, alloc: std.mem.Allocator) void {
     alloc.free(this.cell_codepoints);
     ray.UnloadTexture(this.texture);
