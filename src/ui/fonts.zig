@@ -15,11 +15,12 @@ pub const FontReference = struct {
     font: Font,
 
     pub fn deinit(this: *This) void {
-        if (reference_count.fetchSub(1, .Monotonic) != 1)
+        if (this.reference_count.fetchSub(1, .Monotonic) != 1)
             return; // We did not bring the reference count to 0
+
         if (instance) |it| {
             it.removeFont(this.reference_index);
-            font.deinit(it.alloc);
+            this.font.deinit(it.alloc);
             it.alloc.free(this.font_name);
             it.alloc.destroy(this);
         }
@@ -67,8 +68,16 @@ pub fn loadFont(this: *This, font_name: []const u8, file_name: []const u8, font_
     for (this.loadedFonts.items) |font| {
         if (std.mem.eql(u8, font.font_name, font_name) and font.font_size == font_size) {
             // We want a reference to this font, increase its reference count to keep it alive
-            if (font.reference_count.fetchAdd(1, .Monotonic) == 0) //TODO
-                break; // Darn, the other owner of this font just decreased the reference count to 0
+            if (font.reference_count.fetchAdd(1, .Monotonic) == 0) {
+                // Darn, the other owner of this font just decreased the reference count to 0
+                // We just set it back up again to 1, but the deleting thread is going to remove
+                // the font no matter what (after we release the mutex).
+                // This is problematic if a new call to loadFont gets the mutex first, and it
+                // tries to get a reference to this same font, which now has a non-0 refcount.
+                // To solve this we decrease the count again
+                _ = font.reference_count.fetchSub(1, .Monotonic);
+                break;
+            }
             return font;
         }
     }

@@ -14,6 +14,8 @@ glyphs_per_row: u32, // equal to texture_size / glyph_width
 cell_codepoints: []i32, // (Owned) What codepoint is located at each cell
 default_cell: usize, // The index of a default cell, to be used when a codepoint is unknown
 
+/// Loads a monospaced font into an OpenGL texture as a regular grid
+/// Must be called from the OpenGL thread
 pub fn init(alloc: std.mem.Allocator, file_name: [:0]const u8, font_size: u32) !This {
     var file_size: c_uint = 0;
     const file_data: ?[*]u8 = ray.LoadFileData(file_name, &file_size);
