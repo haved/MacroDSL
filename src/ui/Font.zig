@@ -1,6 +1,7 @@
 /// Struct containing a monospaced font loaded into a texture as a regular grid
 const std = @import("std");
 const ray = @import("raylib");
+const default_glyphs = @import("glyphs.zig").default_glyphs;
 
 const This = @This();
 
@@ -23,14 +24,15 @@ pub fn init(alloc: std.mem.Allocator, file_name: [:0]const u8, font_size: u32) !
         return error.FileNotFound;
     defer ray.UnloadFileData(file_data);
 
-    const font_chars: ?[*]c_int = null; // The raylib default char set is 32..126
-    const glyph_count = 95;
+    const font_chars = &default_glyphs;
+    const glyph_count = default_glyphs.len;
 
     const c_glyphs: ?[*]ray.GlyphInfo = ray.LoadFontData(
         file_data,
         @intCast(c_int, file_size),
         @intCast(c_int, font_size),
-        font_chars,
+        // raylib doesn't actually modify the array, so we "const-cast"
+        @intToPtr([*c]c_int, @ptrToInt(font_chars)),
         glyph_count,
         ray.FONT_DEFAULT,
     );
@@ -57,9 +59,13 @@ pub fn init(alloc: std.mem.Allocator, file_name: [:0]const u8, font_size: u32) !
     defer ray.UnloadImage(atlas_image);
 
     const cell_codepoints = try alloc.alloc(i32, glyph_count);
+    var default_cell: usize = 0;
 
     for (glyphs) |glyph, i| {
         cell_codepoints[i] = glyph.value;
+        if (glyph.value == '?')
+            default_cell = i;
+
         if (glyph.advanceX != glyph_width)
             return error.FontNotMonospaced;
 
@@ -78,6 +84,8 @@ pub fn init(alloc: std.mem.Allocator, file_name: [:0]const u8, font_size: u32) !
         ray.ImageDraw(&atlas_image, glyph.image, source_rect, dest_rect, ray.WHITE);
     }
 
+    // _ = ray.ExportImage(atlas_image, "fontatlas.png");
+
     const texture = ray.LoadTextureFromImage(atlas_image);
 
     return This{
@@ -88,7 +96,7 @@ pub fn init(alloc: std.mem.Allocator, file_name: [:0]const u8, font_size: u32) !
         .glyphs_per_row = glyphs_per_row,
 
         .cell_codepoints = cell_codepoints,
-        .default_cell = 0,
+        .default_cell = default_cell,
     };
 }
 
@@ -97,4 +105,8 @@ pub fn init(alloc: std.mem.Allocator, file_name: [:0]const u8, font_size: u32) !
 pub fn deinit(this: *This, alloc: std.mem.Allocator) void {
     alloc.free(this.cell_codepoints);
     ray.UnloadTexture(this.texture);
+}
+
+pub fn cell_index_for_glyph(this: *This, codepoint: i32) usize {
+    return std.mem.indexOfScalar(i32, this.cell_codepoints, codepoint) orelse this.default_cell;
 }

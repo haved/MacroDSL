@@ -9,7 +9,7 @@ There is also a difference between making single editing operations,
 which should all be fast, and running a program.
 
 ### Ideal node size
-What is the best size?
+What is the best size? Maybe its even ideal to avoid multiples of 64 bytes, to spread hits over cache sets.
 
 #### Letting internal and leaf nodes have different size
 Maybe e.g. internal should only be 128 bytes?
@@ -17,12 +17,17 @@ Maybe e.g. internal should only be 128 bytes?
 ### Allocating virtual memory pages?
 Instead of making increasingly large arenas,
 what if we just set aside 16GB of virtual address space?
+Will not work for WebAssembly.
 
 #### Not using full 64-bit pointers to nodes
 If the nodes are all in the same area, smaller indexes could be used
 
-### Not having 64 bit byte count on leaf nodes
-A leaf couldn't possibly contain that many bytes, unless we start allowing special leaf nodes that point into files.
+### Should the down pointers contain child size?
+A classic B+-tree has some sort of key for each child pointer.
+I was thinking number of text bytes in subtree.
+We could instead get the data from the child when needed.
+This might be better, since we can do less updates when changing leaf nodes.
+Profiling! Cachegrind!
 
 ### Letting internal nodes have dirty child sizes
 As long as the child and parent always agree about the "dirty" state,

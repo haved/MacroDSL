@@ -32,6 +32,9 @@ zig build run
 
 ## References
 
- - [learnzig.org](https://ziglearn.org/)
  - [Raylib](https://www.raylib.com/index.html)
- - [Tetris in Zig and WebGL](https://github.com/raulgrell/tetris)
+ 
+About memory, cache and speed:
+ - [Algorithms for Modern Hardware](https://en.algorithmica.org/hpc/cpu-cache) - Especially chapter about [RAM & CPU Caches](https://en.algorithmica.org/hpc/cpu-cache/) 
+ - [Gallery Of Processor Cache Effects](http://igoro.com/archive/gallery-of-processor-cache-effects)
+ - [Measuring and Reducing CPU Usage in SQLite](https://www.sqlite.org/draft/cpu.html)

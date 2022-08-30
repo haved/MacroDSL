@@ -18,10 +18,10 @@ pub fn main() !void {
     var frame = try runtime.createFrame(1600, 900);
     defer runtime.destroyFrame() catch unreachable;
 
-    try fonts.init(alloc);
-    defer fonts.deinit();
-    const default_font = fonts.loadFont("Source Code Pro", "res/SourceCodePro.otf", 24);
-    default_font.deinit();
+    try fonts.createInstance(alloc);
+    defer fonts.destoryInstance();
+    const default_font = try fonts.instance.?.loadFont("Source Code Pro", "res/SourceCodePro-Regular.otf", 24);
+    defer default_font.deinit();
 
     // Give the frame the default layout
     frame.setLayout(try makeDefaultLayout(frame, alloc));
@@ -31,39 +31,48 @@ pub fn main() !void {
 }
 
 fn makeDefaultLayout(frame: *Frame, alloc: std.mem.Allocator) !Layout {
-    const main_window = Window.init(frame, try frame.runtime.getDefaultBuffer(), .{});
-    const macro_window = Window.init(frame, try frame.runtime.getMacroBuffer(), .{});
-    const message_window = Window.init(frame, try frame.runtime.getMessageBuffer(), .{
+    var modeline_split = try makeModelineSplit(frame, alloc);
+    errdefer modeline_split.deinit();
+    return try Layout.initBorderLayout(modeline_split, 4, alloc);
+}
+
+fn makeMainSplit(frame: *Frame, alloc: std.mem.Allocator) !Layout {
+    var main_window = try Window.init(frame, try frame.runtime.getDefaultBuffer(), .{});
+    errdefer main_window.deinit();
+    var macro_window = try Window.init(frame, try frame.runtime.getMacroBuffer(), .{});
+    errdefer macro_window.deinit();
+    return try Layout.initSplitLayout(
+        Layout{ .content = .{ .window = main_window } },
+        Layout{ .content = .{ .window = macro_window } },
+        Layout.SplitDirection.vertical,
+        8,
+        true,
+        100, // Each gets a minimum width of 100
+        100,
+        2, // Desire 2:1 ratio by default
+        1,
+        alloc,
+    );
+}
+
+fn makeModelineSplit(frame: *Frame, alloc: std.mem.Allocator) !Layout {
+    var main_split = try makeMainSplit(frame, alloc);
+    errdefer main_split.deinit();
+    var message_window = try Window.init(frame, try frame.runtime.getMessageBuffer(), .{
         .show_modeline = false,
         .permanent = true,
     });
-    var modeline_split = modeline_split: {
-        var main_split = try Layout.initSplitLayout(
-            Layout{ .content = .{ .window = main_window } },
-            Layout{ .content = .{ .window = macro_window } },
-            Layout.SplitDirection.vertical,
-            8,
-            true,
-            100, // Each gets a minimum width of 100
-            100,
-            2, // Desire 2:1 ratio by default
-            1,
-            alloc,
-        );
-        errdefer main_split.deinit();
-        break :modeline_split try Layout.initSplitLayout(
-            main_split,
-            Layout{ .content = .{ .window = message_window }, .height = 32 },
-            Layout.SplitDirection.horizontal,
-            0,
-            false,
-            0,
-            32, // Layout 2 min height
-            1, // Desire 1:0 ratio, but with min height
-            0,
-            alloc,
-        );
-    };
-    errdefer modeline_split.deinit();
-    return try Layout.initBorderLayout(modeline_split, 4, alloc);
+    errdefer message_window.deinit();
+    return try Layout.initSplitLayout(
+        main_split,
+        Layout{ .content = .{ .window = message_window }, .height = 32 },
+        Layout.SplitDirection.horizontal,
+        0,
+        false,
+        0,
+        32, // Layout 2 min height
+        1, // Desire 1:0 ratio, but with min height
+        0,
+        alloc,
+    );
 }

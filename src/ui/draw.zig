@@ -10,6 +10,8 @@ pub fn texturedRectangle(ix: i32, iy: i32, iwidth: i32, iheight: i32, color: ray
 }
 
 pub fn texturedRectangleF(x: f32, y: f32, width: f32, height: f32, color: raylib.Color) void {
+    _ = rlgl.rlCheckRenderBatchLimit(4);
+
     rlgl.rlBegin(rlgl.RL_QUADS);
     rlgl.rlNormal3f(0.0, 0.0, 1.0);
     rlgl.rlColor4ub(color.r, color.g, color.b, color.a);

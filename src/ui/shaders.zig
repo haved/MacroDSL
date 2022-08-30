@@ -71,11 +71,11 @@ fn Shader(vertex: ?[]const u8, fragment: ?[]const u8, variables: []const [:0]con
         pub const setVec2 = makeSetterFunction([2]f32, ray.SHADER_UNIFORM_VEC2).invoke;
         pub const setVec3 = makeSetterFunction([3]f32, ray.SHADER_UNIFORM_VEC3).invoke;
         pub const setVec4 = makeSetterFunction([4]f32, ray.SHADER_UNIFORM_VEC4).invoke;
-        pub const setInt = makeSetterFunction(u32, ray.SHADER_UNIFORM_INT).invoke;
-        pub const setIVec2 = makeSetterFunction([2]u32, ray.SHADER_UNIFORM_IVEC2).invoke;
-        pub const setIVec3 = makeSetterFunction([3]u32, ray.SHADER_UNIFORM_IVEC3).invoke;
-        pub const setIVec4 = makeSetterFunction([4]u32, ray.SHADER_UNIFORM_IVEC4).invoke;
-        pub const setSampler2D = makeSetterFunction(c_int, ray.SHADER_UNIFORM_SAMPLER2D).invoke;
+        pub const setInt = makeSetterFunction(i32, ray.SHADER_UNIFORM_INT).invoke;
+        pub const setIVec2 = makeSetterFunction([2]i32, ray.SHADER_UNIFORM_IVEC2).invoke;
+        pub const setIVec3 = makeSetterFunction([3]i32, ray.SHADER_UNIFORM_IVEC3).invoke;
+        pub const setIVec4 = makeSetterFunction([4]i32, ray.SHADER_UNIFORM_IVEC4).invoke;
+        pub const setSampler2D = makeSetterFunction(ray.Texture, ray.SHADER_UNIFORM_SAMPLER2D).invoke;
     };
 }
 
@@ -84,6 +84,7 @@ pub var textGrid: Shader("../glsl/textGrid.vs", "../glsl/textGrid.fs", &[_][:0]c
     "foregroundColor",
     "gridSize",
     "cellSize",
+    "fontatlas",
 }) = .{};
 
 pub fn loadShaders() !void {
