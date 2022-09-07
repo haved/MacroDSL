@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const ray = @import("raylib");
+const rlgl = @import("rlgl");
 const draw = @import("draw.zig");
 const Frame = @import("Frame.zig");
 const Buffer = @import("../text/Buffer.zig");
@@ -26,13 +27,25 @@ y: i32 = 0,
 width: i32 = 0,
 height: i32 = 0,
 
+textmap: ray.Texture,
+
 font: ?*FontReference,
 
 /// Creates a Window containing the given buffer
 /// The buffer is not owned by the window
 pub fn init(frame: *Frame, buffer: *Buffer, flags: Flags) !This {
     const font = try fonts.instance.?.getDefaultFont();
-    return This{ .frame = frame, .buffer = buffer, .flags = flags, .font = font };
+    errdefer font.deinit();
+    const textmap = ray.LoadTexture("res/test.png");
+    errdefer ray.UnloadTexture(textmap);
+
+    return This{
+        .frame = frame,
+        .buffer = buffer,
+        .flags = flags,
+        .textmap = textmap,
+        .font = font,
+    };
 }
 
 pub fn deinit(this: *This) void {
@@ -67,13 +80,12 @@ pub fn render(this: *This) void {
     // Draw text contents
     if (this.font) |font| {
         shaders.textGrid.bind();
-        shaders.textGrid.setIVec2("gridSize", .{ this.width, this.height });
         shaders.textGrid.setIVec2("cellSize", .{
             @intCast(i32, font.font.glyph_width),
             @intCast(i32, font.font.base_size),
         });
-        shaders.textGrid.setSampler2D("fontAtlas", font.font.texture);
-        draw.texturedRectangle(this.x, this.y, this.width, this.height, ray.WHITE);
+        shaders.textGrid.setTexture("fontAtlas", font.font.texture);
+        draw.texturePart(this.x, this.y, this.width, grid_height, this.textmap, ray.WHITE);
         shaders.textGrid.unbind();
     }
 }

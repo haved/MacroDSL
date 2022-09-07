@@ -51,20 +51,28 @@ fn Shader(vertex: ?[]const u8, fragment: ?[]const u8, variables: []const [:0]con
                 if (std.mem.eql(u8, name, variable))
                     return i;
             }
-            unreachable;
+            @compileError("Unrecognized uniform name");
         }
 
-        fn makeSetterFunction(comptime T: type, uniform_type: c_int) type {
+        fn makeSetterFunction(comptime T: type, comptime uniform_type: c_int) type {
             return struct {
                 fn invoke(this: *This, comptime name: [:0]const u8, value: T) void {
                     ray.SetShaderValue(
                         this.handle orelse unreachable,
-                        this.variable_locations[variableIndexFromName(name)],
+                        this.variable_locations[comptime variableIndexFromName(name)],
                         &value,
                         uniform_type,
                     );
                 }
             };
+        }
+
+        pub fn setTexture(this: *This, comptime name: [:0]const u8, texture: ray.Texture) void {
+            ray.SetShaderValueTexture(
+                this.handle orelse unreachable,
+                this.variable_locations[comptime variableIndexFromName(name)],
+                texture,
+            );
         }
 
         pub const setFloat = makeSetterFunction(f32, ray.SHADER_UNIFORM_FLOAT).invoke;
@@ -75,16 +83,14 @@ fn Shader(vertex: ?[]const u8, fragment: ?[]const u8, variables: []const [:0]con
         pub const setIVec2 = makeSetterFunction([2]i32, ray.SHADER_UNIFORM_IVEC2).invoke;
         pub const setIVec3 = makeSetterFunction([3]i32, ray.SHADER_UNIFORM_IVEC3).invoke;
         pub const setIVec4 = makeSetterFunction([4]i32, ray.SHADER_UNIFORM_IVEC4).invoke;
-        pub const setSampler2D = makeSetterFunction(ray.Texture, ray.SHADER_UNIFORM_SAMPLER2D).invoke;
     };
 }
 
 pub var textGrid: Shader("../glsl/textGrid.vs", "../glsl/textGrid.fs", &[_][:0]const u8{
     "backgroundColor",
     "foregroundColor",
-    "gridSize",
     "cellSize",
-    "fontatlas",
+    "fontAtlas",
 }) = .{};
 
 pub fn loadShaders() !void {
