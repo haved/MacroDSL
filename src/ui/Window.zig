@@ -27,7 +27,7 @@ y: i32 = 0,
 width: i32 = 0,
 height: i32 = 0,
 
-textmap: ray.Texture,
+textmap: ?ray.Texture,
 
 font: ?*FontReference,
 
@@ -36,7 +36,7 @@ font: ?*FontReference,
 pub fn init(frame: *Frame, buffer: *Buffer, flags: Flags) !This {
     const font = try fonts.instance.?.getDefaultFont();
     errdefer font.deinit();
-    const textmap = ray.LoadTexture("res/test.png");
+    const textmap = null;
     errdefer ray.UnloadTexture(textmap);
 
     return This{
@@ -79,13 +79,23 @@ pub fn render(this: *This) void {
 
     // Draw text contents
     if (this.font) |font| {
+        if (this.textmap == null) {
+            const text_width = @divFloor(this.width + font.font.glyph_width - 1, font.font.glyph_width);
+            const text_height = @divFloor(grid_height + font.font.base_size - 1, font.font.base_size);
+            var text_image = ray.GenImageColor(text_width, text_height, rey.BLACK);
+            defer rey.UnloadImage(text_image);
+            rey.ImageDrawPixel();
+
+            this.textmap = rey.LoadTextureFromImage(text_image);
+        }
+
         shaders.textGrid.bind();
         shaders.textGrid.setIVec2("cellSize", .{
             @intCast(i32, font.font.glyph_width),
-            @intCast(i32, font.font.base_size),
+            @intCast(i32, font.font.font_size),
         });
         shaders.textGrid.setTexture("fontAtlas", font.font.texture);
-        draw.texturePart(this.x, this.y, this.width, grid_height, this.textmap, ray.WHITE);
+        draw.texturePart(this.x, this.y, this.width, grid_height, this.textmap.?, ray.WHITE);
         shaders.textGrid.unbind();
     }
 }

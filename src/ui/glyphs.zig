@@ -1,6 +1,7 @@
 pub const default_glyphs = generate_default_glyphs().glyphs;
 
 // Creates a c_int array containing the codepoints for all default glyphs
+// Unicode codepoints are 21 bit integers, so c_int should always be fine
 fn generate_default_glyphs() type {
     comptime var glyphs: [101]c_int = undefined;
 
